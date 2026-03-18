@@ -13,6 +13,9 @@ const BunkerGame = (() => {
     survivorCount: 0,
     eliminatedPlayers: [],
     activeActionCard: null,
+    roundPlayedPlayers: {},
+    turnRevealed: false,
+    tieCandidates: [],
   };
 
   // ---- DOM helpers ----
@@ -38,7 +41,6 @@ const BunkerGame = (() => {
   function initSetup() {
     showScreen("screen-setup");
     renderPlayerList();
-    updateCapacityDisplay();
     updateStartButton();
   }
 
@@ -79,7 +81,6 @@ const BunkerGame = (() => {
     input.value = "";
     input.focus();
     renderPlayerList();
-    updateCapacityDisplay();
     updateStartButton();
   }
 
@@ -87,34 +88,12 @@ const BunkerGame = (() => {
     const names = getPlayerNames();
     names.splice(index, 1);
     renderPlayerList();
-    updateCapacityDisplay();
     updateStartButton();
   }
 
-  function updateCapacityDisplay() {
-    const names = getPlayerNames();
-    const total = names.length;
-    const capacitySlider = document.getElementById("bunker-capacity");
-    const capacityVal = document.getElementById("capacity-value");
 
-    if (total < 2) {
-      capacitySlider.disabled = true;
-      capacitySlider.min = 1;
-      capacitySlider.max = 1;
-      capacitySlider.value = 1;
-    } else {
-      const max = Math.max(1, Math.floor(total / 2));
-      capacitySlider.disabled = false;
-      capacitySlider.min = 1;
-      capacitySlider.max = max;
-      // Set to ceil(total/2) as recommended default, capped to valid range
-      capacitySlider.value = Math.min(max, Math.ceil(total / 2));
-    }
-    capacityVal.textContent = capacitySlider.value;
-    const statDisplay = document.getElementById("capacity-stat-display");
-    if (statDisplay) statDisplay.textContent = capacitySlider.value;
-    document.getElementById("player-count-display").textContent = total;
-  }
+  // updateCapacityDisplay удалён — capacity теперь вычисляется автоматически
+
 
   function updateStartButton() {
     const btn = document.getElementById("btn-start-game");
@@ -126,13 +105,17 @@ const BunkerGame = (() => {
     const names = getPlayerNames();
     if (names.length < 2) { showNotification("Нужно минимум 2 игрока!", "warning"); return; }
 
-    const capacity = parseInt(document.getElementById("bunker-capacity").value);
+    // Вместимость бункера = ceil(половина игроков)
+    const capacity = Math.ceil(names.length / 2);
     state.bunkerCapacity = capacity;
     state.survivorCount = capacity;
     state.round = 1;
     state.eliminatedPlayers = [];
     state.votingResults = {};
     state.currentPlayerIndex = 0;
+    state.roundPlayedPlayers = {};
+    state.turnRevealed = false;
+    state.tieCandidates = [];
 
     // Generate cards
     state.players = names.map((name) => generatePlayerCard(name));
@@ -161,10 +144,45 @@ const BunkerGame = (() => {
   // ---- Game Phase (Card Reveal) ----
   function startGamePhase() {
     state.phase = "game";
-    state.currentPlayerIndex = 0;
+    beginRound();
+  }
+
+  function beginRound() {
+    state.phase = "game";
+    state.tieCandidates = [];
+    state.roundPlayedPlayers = {};
+
+    state.players.forEach((player, i) => {
+      if (!player.isEliminated) {
+        state.roundPlayedPlayers[i] = false;
+      }
+    });
+
+    const firstAlive = getFirstAliveIndex();
+    if (firstAlive === -1) {
+      endGame();
+      return;
+    }
+    state.currentPlayerIndex = firstAlive;
+
+    showNotification(`Раунд ${state.round}: исследование бункера и открытие карт`, "info");
     showScreen("screen-game");
     renderGameOverview();
     showCurrentPlayerCard();
+  }
+
+  function getFirstAliveIndex() {
+    return state.players.findIndex((p) => !p.isEliminated);
+  }
+
+  function getNextAliveNotPlayedIndex(afterIndex) {
+    for (let i = afterIndex + 1; i < state.players.length; i++) {
+      if (!state.players[i].isEliminated && !state.roundPlayedPlayers[i]) return i;
+    }
+    for (let i = 0; i <= afterIndex; i++) {
+      if (!state.players[i].isEliminated && !state.roundPlayedPlayers[i]) return i;
+    }
+    return -1;
   }
 
   function renderGameOverview() {
@@ -181,7 +199,13 @@ const BunkerGame = (() => {
         ${player.isEliminated ? '<span class="mini-status eliminated-badge">Выбыл</span>' : ""}
       `;
       div.addEventListener("click", () => {
-        if (!player.isEliminated) viewPlayerCard(i);
+        if (player.isEliminated) return;
+        if (state.phase !== "game") return;
+        if (i !== state.currentPlayerIndex) {
+          showNotification("Сейчас ход другого игрока", "warning");
+          return;
+        }
+        viewPlayerCard(i);
       });
       container.appendChild(div);
     });
@@ -198,6 +222,25 @@ const BunkerGame = (() => {
     return avatars[index % avatars.length];
   }
 
+  function canRevealKey(key) {
+    return state.round === 1 ? key === "profession" : true;
+  }
+
+  function getPlayerAttributes(player) {
+    return [
+      { key: "profession", icon: "💼", label: "Профессия", value: player.profession.name, desc: player.profession.description },
+      { key: "health", icon: "❤️", label: "Здоровье", value: player.health.name, desc: "" },
+      { key: "hobby", icon: "🎯", label: "Хобби", value: player.hobby.name, desc: "" },
+      { key: "luggage", icon: "🎒", label: "Багаж", value: player.luggage.name, desc: "" },
+      { key: "phobiaFact", icon: "🔮", label: "Факт/Фобия", value: player.phobiaFact.name, desc: "" },
+      { key: "actionCard", icon: player.actionCard.icon, label: "Карта действия", value: player.actionCard.name, desc: player.actionCard.description },
+    ];
+  }
+
+  function hasRevealableAttributes(player) {
+    return getPlayerAttributes(player).some((a) => !player.revealed[a.key] && canRevealKey(a.key));
+  }
+
   function showCurrentPlayerCard() {
     // Find next non-eliminated player
     const alive = state.players.filter((p) => !p.isEliminated);
@@ -206,14 +249,13 @@ const BunkerGame = (() => {
       return;
     }
 
-    while (state.currentPlayerIndex < state.players.length && state.players[state.currentPlayerIndex].isEliminated) {
-      state.currentPlayerIndex++;
-    }
-    if (state.currentPlayerIndex >= state.players.length) {
-      state.currentPlayerIndex = 0;
-      // Start voting after all alive players have shown cards in this round
-      startVotingPhase();
-      return;
+    if (state.currentPlayerIndex < 0 || state.currentPlayerIndex >= state.players.length || state.players[state.currentPlayerIndex].isEliminated) {
+      const nextAlive = getFirstAliveIndex();
+      if (nextAlive === -1) {
+        endGame();
+        return;
+      }
+      state.currentPlayerIndex = nextAlive;
     }
 
     viewPlayerCard(state.currentPlayerIndex);
@@ -223,6 +265,18 @@ const BunkerGame = (() => {
     const player = state.players[playerIndex];
     if (player.isEliminated) return;
     state.currentPlayerIndex = playerIndex;
+    state.turnRevealed = false;
+
+    // По правилам в 1-м раунде каждый обязан раскрыть профессию.
+    if (state.round === 1 && !player.revealed.profession) {
+      player.revealed.profession = true;
+      state.turnRevealed = true;
+    }
+
+    if (!state.turnRevealed && !hasRevealableAttributes(player)) {
+      state.turnRevealed = true;
+    }
+
     renderGameOverview();
     renderPlayerCard(player, playerIndex);
   }
@@ -231,14 +285,7 @@ const BunkerGame = (() => {
     const cardDiv = document.getElementById("current-player-card");
     const isCurrentTurn = playerIndex === state.currentPlayerIndex;
 
-    const attrs = [
-      { key: "profession", icon: "💼", label: "Профессия", value: player.profession.name, desc: player.profession.description },
-      { key: "health", icon: "❤️", label: "Здоровье", value: player.health.name, desc: "" },
-      { key: "hobby", icon: "🎯", label: "Хобби", value: player.hobby.name, desc: "" },
-      { key: "luggage", icon: "🎒", label: "Багаж", value: player.luggage.name, desc: "" },
-      { key: "phobiaFact", icon: "🔮", label: "Факт/Фобия", value: player.phobiaFact.name, desc: "" },
-      { key: "actionCard", icon: player.actionCard.icon, label: "Карта действия", value: player.actionCard.name, desc: player.actionCard.description },
-    ];
+    const attrs = getPlayerAttributes(player);
 
     const revealedCount = Object.values(player.revealed).filter(Boolean).length;
     const totalAttrs = attrs.length;
@@ -258,29 +305,94 @@ const BunkerGame = (() => {
         ${attrs.map((attr) => renderAttribute(attr, player.revealed[attr.key])).join("")}
       </div>
       <div class="card-actions">
-        ${isCurrentTurn ? `<button class="btn btn-secondary" id="btn-reveal-random">🎲 Раскрыть случайный атрибут</button>` : ""}
-        ${isCurrentTurn ? `<button class="btn btn-primary" id="btn-next-player-card">➡️ Следующий игрок</button>` : ""}
-        ${isCurrentTurn && revealedCount < totalAttrs ? `<button class="btn btn-reveal-all" id="btn-reveal-all-card">👁️ Раскрыть всё</button>` : ""}
+        ${isCurrentTurn ? `<button class="btn btn-secondary" id="btn-private-view">🙈 Мои карты (приватно)</button>` : ""}
+        ${isCurrentTurn ? `<button class="btn btn-primary" id="btn-next-player-card" ${state.turnRevealed ? "" : "disabled"}>➡️ Следующий игрок</button>` : ""}
       </div>
     `;
 
     // Attach action button handlers without inline onclick
     if (isCurrentTurn) {
-      cardDiv.querySelector("#btn-reveal-random")?.addEventListener("click", () => revealRandomAttribute(playerIndex));
+      cardDiv.querySelector("#btn-private-view")?.addEventListener("click", () => openPrivateView(playerIndex));
       cardDiv.querySelector("#btn-next-player-card")?.addEventListener("click", nextPlayer);
-      cardDiv.querySelector("#btn-reveal-all-card")?.addEventListener("click", () => revealAll(playerIndex));
+    }
+  }
+
+  function openPrivateView(playerIndex) {
+    if (state.phase !== "game") return;
+    if (playerIndex !== state.currentPlayerIndex) {
+      showNotification("Сейчас ход другого игрока", "warning");
+      return;
     }
 
-    // Add reveal click handlers
-    cardDiv.querySelectorAll(".attribute-card.hidden").forEach((el) => {
-      el.addEventListener("click", () => {
-        const key = el.dataset.key;
-        if (!player.revealed[key]) {
-          player.revealed[key] = true;
-          renderPlayerCard(player, playerIndex);
-        }
+    const player = state.players[playerIndex];
+    const attrs = getPlayerAttributes(player);
+    const modal = document.getElementById("private-player-modal");
+    const nameEl = document.getElementById("private-player-name");
+    const noteEl = document.getElementById("private-round-note");
+    const attrsEl = document.getElementById("private-attrs");
+
+    if (!modal || !nameEl || !noteEl || !attrsEl) return;
+
+    nameEl.textContent = player.playerName;
+    noteEl.textContent = state.round === 1
+      ? "В 1-м раунде для раскрытия доступна только Профессия."
+      : "Выберите 1 атрибут, который раскроете всем игрокам в этом раунде.";
+
+    attrsEl.innerHTML = attrs.map((attr) => {
+      const isRevealed = player.revealed[attr.key];
+      const canReveal = !isRevealed && !state.turnRevealed && canRevealKey(attr.key);
+      const blockedByRound = !isRevealed && !canRevealKey(attr.key);
+
+      return `
+        <div class="private-attr">
+          <div class="private-attr-head">
+            <span>${attr.icon}</span>
+            <strong>${attr.label}</strong>
+          </div>
+          <div class="private-attr-value">${escapeHtml(attr.value)}</div>
+          ${attr.desc ? `<div class="private-attr-desc">${escapeHtml(attr.desc)}</div>` : ""}
+          <div class="private-attr-actions">
+            <button class="btn btn-primary btn-reveal-choice" data-key="${attr.key}" ${canReveal ? "" : "disabled"}>
+              Раскрыть всем
+            </button>
+            <span class="private-state">${isRevealed ? "Уже раскрыто" : blockedByRound ? "Недоступно в этом раунде" : state.turnRevealed ? "Лимит раскрытия исчерпан" : "Скрыто"}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    attrsEl.querySelectorAll(".btn-reveal-choice").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        revealFromPrivate(playerIndex, btn.dataset.key);
       });
     });
+
+    modal.classList.add("open");
+  }
+
+  function closePrivateView() {
+    document.getElementById("private-player-modal")?.classList.remove("open");
+  }
+
+  function revealFromPrivate(playerIndex, key) {
+    const player = state.players[playerIndex];
+    if (!player || player.isEliminated) return;
+    if (playerIndex !== state.currentPlayerIndex) return;
+    if (state.turnRevealed) return;
+    if (!canRevealKey(key)) {
+      showNotification("Этот атрибут нельзя раскрыть в текущем раунде", "warning");
+      return;
+    }
+    if (player.revealed[key]) {
+      showNotification("Атрибут уже раскрыт", "info");
+      return;
+    }
+
+    player.revealed[key] = true;
+    state.turnRevealed = true;
+    closePrivateView();
+    renderPlayerCard(player, playerIndex);
+    showNotification(`Игрок раскрыл: ${key === "profession" ? "Профессию" : "атрибут"}`, "success");
   }
 
   function renderAttribute(attr, isRevealed) {
@@ -304,35 +416,24 @@ const BunkerGame = (() => {
     }
   }
 
-  function revealRandomAttribute(playerIndex) {
-    const player = state.players[playerIndex];
-    const hidden = Object.keys(player.revealed).filter((k) => !player.revealed[k]);
-    if (hidden.length === 0) { showNotification("Все атрибуты уже раскрыты!", "info"); return; }
-    const key = hidden[Math.floor(Math.random() * hidden.length)];
-    player.revealed[key] = true;
-    renderPlayerCard(player, playerIndex);
-    showNotification("Атрибут раскрыт!", "success");
-  }
-
-  function revealAll(playerIndex) {
-    const player = state.players[playerIndex];
-    Object.keys(player.revealed).forEach((k) => (player.revealed[k] = true));
-    renderPlayerCard(player, playerIndex);
-  }
-
   function nextPlayer() {
+    if (!state.turnRevealed) {
+      showNotification("Сначала раскройте 1 атрибут этого игрока", "warning");
+      return;
+    }
+
+    state.roundPlayedPlayers[state.currentPlayerIndex] = true;
+
     const alivePlayers = state.players.filter((p) => !p.isEliminated);
     if (alivePlayers.length <= state.bunkerCapacity) {
       endGame();
       return;
     }
 
-    // Find next alive player after current
-    let next = state.currentPlayerIndex + 1;
-    while (next < state.players.length && state.players[next].isEliminated) next++;
+    const next = getNextAliveNotPlayedIndex(state.currentPlayerIndex);
 
-    if (next >= state.players.length) {
-      // All alive players have gone — start voting
+    if (next === -1) {
+      // Круг открытия карт завершён — переходим к голосованию.
       startVotingPhase();
     } else {
       state.currentPlayerIndex = next;
@@ -345,6 +446,7 @@ const BunkerGame = (() => {
   function startVotingPhase() {
     state.phase = "voting";
     state.votingResults = {};
+    state.tieCandidates = [];
     state.players.forEach((p) => { if (!p.isEliminated) p.votes = 0; });
     showScreen("screen-voting");
     renderVoting();
@@ -352,13 +454,16 @@ const BunkerGame = (() => {
 
   function renderVoting() {
     const alivePlayers = state.players.filter((p) => !p.isEliminated);
+    const votingPool = state.tieCandidates.length > 0
+      ? alivePlayers.filter((p) => state.tieCandidates.includes(p.playerName))
+      : alivePlayers;
     const container = document.getElementById("voting-players");
     container.innerHTML = "";
 
     document.getElementById("voting-round").textContent = state.round;
-    document.getElementById("voting-eliminate").textContent = Math.max(1, alivePlayers.length - state.bunkerCapacity);
+    document.getElementById("voting-eliminate").textContent = 1;
 
-    alivePlayers.forEach((player, i) => {
+    votingPool.forEach((player, i) => {
       const idx = state.players.indexOf(player);
       const voteCount = state.votingResults[player.playerName] || 0;
       const div = document.createElement("div");
@@ -394,39 +499,59 @@ const BunkerGame = (() => {
   }
 
   function confirmVotes() {
-    // Find player(s) with most votes
     const alive = state.players.filter((p) => !p.isEliminated);
-    const toEliminate = Math.max(1, alive.length - state.bunkerCapacity);
+    const pool = state.tieCandidates.length > 0
+      ? alive.filter((p) => state.tieCandidates.includes(p.playerName))
+      : alive;
 
-    // Sort by votes descending
-    const sorted = alive.slice().sort((a, b) => {
-      const va = state.votingResults[a.playerName] || 0;
-      const vb = state.votingResults[b.playerName] || 0;
-      return vb - va;
+    if (pool.length === 0) {
+      showNotification("Нет кандидатов для голосования", "warning");
+      return;
+    }
+
+    let maxVotes = -1;
+    pool.forEach((p) => {
+      const v = state.votingResults[p.playerName] || 0;
+      if (v > maxVotes) maxVotes = v;
     });
 
-    const eliminated = sorted.slice(0, toEliminate);
-    const names = eliminated.map((p) => p.playerName);
+    if (maxVotes <= 0) {
+      showNotification("Добавьте голоса перед подтверждением", "warning");
+      return;
+    }
 
-    eliminated.forEach((p) => {
-      p.isEliminated = true;
-      p.votes = state.votingResults[p.playerName] || 0;
-      state.eliminatedPlayers.push(p);
-    });
+    let leaders = pool.filter((p) => (state.votingResults[p.playerName] || 0) === maxVotes);
 
-    showNotification(`Выбыли: ${names.join(", ")}!`, "error");
+    if (leaders.length > 1 && state.tieCandidates.length === 0) {
+      // Переголосование только между кандидатами с максимумом.
+      state.tieCandidates = leaders.map((p) => p.playerName);
+      state.votingResults = {};
+      renderVoting();
+      showNotification(`Ничья: ${state.tieCandidates.join(", ")}. Проведите переголосование.`, "warning");
+      return;
+    }
+
+    if (leaders.length > 1 && state.tieCandidates.length > 0) {
+      // По правилам после повторной ничьей определяем случайно.
+      leaders = [leaders[Math.floor(Math.random() * leaders.length)]];
+      showNotification("Повторная ничья: кандидат выбран случайно", "warning");
+    }
+
+    const eliminated = leaders[0];
+    eliminated.isEliminated = true;
+    eliminated.votes = state.votingResults[eliminated.playerName] || 0;
+    state.eliminatedPlayers.push(eliminated);
+    state.tieCandidates = [];
+
+    showNotification(`Выбыл: ${eliminated.playerName}!`, "error");
 
     const remainingAlive = state.players.filter((p) => !p.isEliminated);
     if (remainingAlive.length <= state.bunkerCapacity) {
       setTimeout(() => endGame(), 1500);
     } else {
       state.round++;
-      state.currentPlayerIndex = 0;
       setTimeout(() => {
-        state.phase = "game";
-        showScreen("screen-game");
-        renderGameOverview();
-        showCurrentPlayerCard();
+        beginRound();
       }, 1500);
     }
   }
@@ -496,6 +621,9 @@ const BunkerGame = (() => {
       survivorCount: 0,
       eliminatedPlayers: [],
       activeActionCard: null,
+      roundPlayedPlayers: {},
+      turnRevealed: false,
+      tieCandidates: [],
       _playerNames: [],
     };
     initSetup();
@@ -526,15 +654,15 @@ const BunkerGame = (() => {
         if (e.key === "Enter") addPlayer();
       });
       document.getElementById("btn-start-game")?.addEventListener("click", startGame);
-      document.getElementById("bunker-capacity")?.addEventListener("input", function () {
-        document.getElementById("capacity-value").textContent = this.value;
-        const statDisplay = document.getElementById("capacity-stat-display");
-        if (statDisplay) statDisplay.textContent = this.value;
-      });
       document.getElementById("btn-proceed-game")?.addEventListener("click", startGamePhase);
-      document.getElementById("btn-start-voting")?.addEventListener("click", startVotingPhase);
       document.getElementById("btn-confirm-votes")?.addEventListener("click", confirmVotes);
       document.getElementById("btn-restart")?.addEventListener("click", restartGame);
+
+      document.getElementById("btn-close-private")?.addEventListener("click", closePrivateView);
+      document.getElementById("btn-private-done")?.addEventListener("click", closePrivateView);
+      document.getElementById("private-player-modal")?.addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) closePrivateView();
+      });
     },
   };
 })();

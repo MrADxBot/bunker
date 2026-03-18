@@ -145,6 +145,7 @@ body {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   padding: 0.7rem 1.4rem;
   border: none;
@@ -154,7 +155,11 @@ body {
   cursor: pointer;
   transition: var(--transition);
   text-decoration: none;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .btn:disabled {
   opacity: 0.4;
@@ -228,6 +233,11 @@ body {
 @media (max-width: 680px) {
   .setup-grid { grid-template-columns: 1fr; }
 }
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
 
 .player-add-row {
   display: flex;
@@ -283,6 +293,7 @@ body {
   flex-shrink: 0;
 }
 .player-name-display { flex: 1; font-weight: 500; }
+.player-name-display { overflow-wrap: anywhere; }
 
 /* Capacity slider */
 .capacity-control {
@@ -300,6 +311,7 @@ body {
   border-radius: 3px;
   outline: none;
 }
+/* capacity-control удалён */
 .capacity-control input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 20px;
@@ -521,7 +533,9 @@ body {
 .attr-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
 .attr-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem; }
 .attr-value { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); }
+.attr-value { overflow-wrap: anywhere; }
 .attr-desc { font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.3rem; font-style: italic; }
+.attr-desc { overflow-wrap: anywhere; }
 
 .card-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; }
 
@@ -536,6 +550,11 @@ body {
   margin-top: 1rem;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+.game-actions-bar > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* ---- Voting Screen ---- */
@@ -560,7 +579,8 @@ body {
 .voting-player-card:hover { border-color: #7c3aed; background: rgba(124,58,237,0.05); }
 .voting-avatar { font-size: 2.5rem; margin-bottom: 0.5rem; }
 .voting-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; }
-.voting-profession { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+.voting-name { overflow-wrap: anywhere; }
+.voting-profession { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.5rem; overflow-wrap: anywhere; }
 .vote-count { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
 
 .voting-footer { text-align: center; }
@@ -592,7 +612,7 @@ body {
 }
 .result-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
   padding: 1rem 1.25rem;
   border-radius: var(--radius-sm);
@@ -619,11 +639,12 @@ body {
 .result-avatar.dim { filter: grayscale(100%); }
 .result-info { flex: 1; }
 .result-name { font-weight: 700; font-size: 1rem; }
-.result-profession { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; }
+.result-name { overflow-wrap: anywhere; }
+.result-profession { font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; overflow-wrap: anywhere; }
 .result-attrs { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.4rem; }
 .result-attrs span { font-size: 0.75rem; color: var(--text-muted); }
-.result-badge { font-size: 0.85rem; font-weight: 700; color: var(--accent-green); white-space: nowrap; }
-.result-badge-out { font-size: 0.85rem; color: var(--accent-red); white-space: nowrap; }
+.result-badge { font-size: 0.85rem; font-weight: 700; color: var(--accent-green); white-space: normal; text-align: right; overflow-wrap: anywhere; }
+.result-badge-out { font-size: 0.85rem; color: var(--accent-red); white-space: normal; text-align: right; overflow-wrap: anywhere; }
 
 .results-footer { text-align: center; margin-top: 1.5rem; }
 
@@ -672,12 +693,90 @@ body {
 .modal h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 1.25rem; color: var(--accent); }
 .modal h3 { font-size: 1rem; font-weight: 700; margin: 1rem 0 0.5rem; color: var(--text-primary); }
 .modal p, .modal li { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; }
+.modal p, .modal li { overflow-wrap: anywhere; }
 .modal ul { padding-left: 1.25rem; }
 .modal li { margin-bottom: 0.3rem; }
+
+.private-modal {
+  max-width: 760px;
+}
+.private-intro {
+  margin-bottom: 0.5rem;
+}
+.private-round-note {
+  color: var(--accent-yellow);
+  margin-bottom: 1rem;
+}
+.private-attrs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+.private-attr {
+  border: 1px solid var(--border);
+  background: var(--bg-dark);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+}
+.private-attr-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+.private-attr-value {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+.private-attr-value { overflow-wrap: anywhere; }
+.private-attr-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+.private-attr-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.private-state {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
 
 /* ---- Responsive ---- */
 @media (max-width: 500px) {
   .game-title { font-size: 1.8rem; }
   .container { padding: 1.25rem 1rem; }
   .card { padding: 1rem; }
+
+  .player-add-row {
+    flex-direction: column;
+  }
+
+  .player-add-row .btn {
+    width: 100%;
+  }
+
+  .card-actions {
+    justify-content: stretch;
+  }
+
+  .card-actions .btn {
+    width: 100%;
+  }
+
+  .result-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .result-badge,
+  .result-badge-out {
+    text-align: left;
+  }
 }
