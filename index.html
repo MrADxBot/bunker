@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Бункер — Браузерная игра</title>
+  <meta name="description" content="Бета-версия браузерной социальной игры Бункер. Апокалипсис уже здесь — кто попадёт в бункер?" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+</head>
+<body>
+
+<!-- ============ NOTIFICATION ============ -->
+<div class="notification" id="notification"></div>
+
+<!-- ============ RULES MODAL ============ -->
+<div class="modal-overlay" id="rules-modal">
+  <div class="modal">
+    <button class="modal-close" id="btn-close-rules">✕</button>
+    <h2>📖 Правила игры «Бункер»</h2>
+
+    <h3>Цель игры</h3>
+    <p>Апокалипсис наступил. Бункер вмещает ограниченное число людей. Игроки должны убедить остальных, что именно они заслуживают место в бункере.</p>
+
+    <h3>Ход игры</h3>
+    <ul>
+      <li>Назначьте одного игрока ведущим или ведите по очереди.</li>
+      <li><strong>Настройка:</strong> Введите имена всех игроков (2–12 человек) и установите вместимость бункера.</li>
+      <li><strong>Катастрофа:</strong> Ведущий зачитывает сценарий катастрофы и описание бункера.</li>
+      <li><strong>Раскрытие карт:</strong> Каждый игрок по очереди раскрывает свои характеристики — частично или полностью — и представляет себя группе.</li>
+      <li><strong>Голосование:</strong> После того как все поговорили, группа голосует за тех, кто должен покинуть бункер.</li>
+      <li><strong>Карты действий:</strong> В свой ход игрок может применить карту действия — она даёт особое преимущество.</li>
+      <li>Раунды продолжаются, пока в игре не останется ровно столько игроков, сколько мест в бункере.</li>
+    </ul>
+
+    <h3>Характеристики персонажа</h3>
+    <ul>
+      <li>💼 <strong>Профессия</strong> — основной навык для выживания</li>
+      <li>❤️ <strong>Здоровье</strong> — физическое состояние</li>
+      <li>🎯 <strong>Хобби</strong> — дополнительный навык</li>
+      <li>🎒 <strong>Багаж</strong> — что вы берёте с собой</li>
+      <li>🔮 <strong>Факт/Фобия</strong> — тайная информация о вас</li>
+      <li>🃏 <strong>Карта действия</strong> — специальная способность</li>
+    </ul>
+
+    <h3>Советы</h3>
+    <ul>
+      <li>Раскрывайте характеристики в выгодный момент — не всё сразу!</li>
+      <li>Скрытые атрибуты (???) можно раскрыть кликом по карточке.</li>
+      <li>Убеждайте других, придумывайте истории, торгуйтесь!</li>
+      <li>Голосуйте честно — только командная работа спасёт бункер.</li>
+    </ul>
+
+    <h3>Управление (ведущий на устройстве)</h3>
+    <ul>
+      <li>«Раскрыть случайный атрибут» — открывает один скрытый атрибут текущего игрока.</li>
+      <li>«Следующий игрок» — переходит к следующему.</li>
+      <li>«Голосование» — запускает раунд голосования.</li>
+      <li>Голосование: нажимайте кнопку «Голосовать» за каждого игрока столько раз, сколько за него проголосовало.</li>
+      <li>«Подтвердить итоги» — выбывает игрок(и) с наибольшим числом голосов.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ HEADER ============ -->
+<header class="game-header">
+  <div class="game-logo">🛡️</div>
+  <h1 class="game-title">Бункер <span class="version-badge">Beta</span></h1>
+  <p class="game-subtitle">Браузерная социальная игра на выживание</p>
+</header>
+
+<!-- ============ SCREEN: SETUP ============ -->
+<div class="screen active" id="screen-setup">
+  <div class="container">
+    <div class="setup-grid">
+
+      <!-- Players panel -->
+      <div class="card">
+        <div class="section-title">👥 Игроки</div>
+        <div class="player-add-row">
+          <input type="text" id="player-name-input" placeholder="Имя игрока..." maxlength="30" autocomplete="off" />
+          <button class="btn btn-primary" id="btn-add-player">+ Добавить</button>
+        </div>
+        <div id="player-list"></div>
+        <p style="margin-top:0.75rem; font-size:0.78rem; color:var(--text-muted);">
+          Минимум 2, максимум 12 игроков
+        </p>
+      </div>
+
+      <!-- Settings panel -->
+      <div>
+        <div class="card">
+          <div class="section-title">⚙️ Настройки</div>
+          <label style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.5rem; display:block;">
+            Вместимость бункера
+          </label>
+          <div class="capacity-control">
+            <input type="range" id="bunker-capacity" min="1" max="6" value="3" />
+            <div class="capacity-value-display" id="capacity-value">3</div>
+          </div>
+          <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.5rem;">
+            Сколько игроков попадут в бункер
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="section-title">📊 Статистика</div>
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-value" id="player-count-display">0</div>
+              <div class="stat-label">Игроков</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="capacity-stat-display">3</div>
+              <div class="stat-label">Мест в бункере</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="setup-footer">
+      <button class="btn btn-secondary" id="btn-rules" style="margin-right:1rem;">
+        📖 Правила
+      </button>
+      <button class="btn btn-primary btn-lg" id="btn-start-game" disabled>
+        🚀 Начать игру
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN: CATASTROPHE ============ -->
+<div class="screen" id="screen-catastrophe">
+  <div class="container catastrophe-screen">
+    <div class="catastrophe-icon-big" id="catastrophe-icon">☢️</div>
+    <h2 class="catastrophe-title" id="catastrophe-title">Ядерная война</h2>
+    <p class="catastrophe-desc" id="catastrophe-description">Описание катастрофы...</p>
+
+    <div class="bunker-info-box">
+      <div class="bunker-info-title">🏠 Бункер</div>
+      <p class="bunker-info-text" id="bunker-description">Описание бункера...</p>
+      <div class="bunker-stats">
+        <div class="bunker-stat">
+          <div class="bunker-stat-val safe" id="bunker-capacity-display">3</div>
+          <div class="bunker-stat-label">Мест в бункере</div>
+        </div>
+        <div class="bunker-stat">
+          <div class="bunker-stat-val" id="total-players-display">6</div>
+          <div class="bunker-stat-label">Всего игроков</div>
+        </div>
+        <div class="bunker-stat">
+          <div class="bunker-stat-val danger" id="eliminated-need-display">3</div>
+          <div class="bunker-stat-label">Нужно выгнать</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-lg" id="btn-proceed-game">
+      🃏 Раздать карточки и начать!
+    </button>
+  </div>
+</div>
+
+<!-- ============ SCREEN: GAME ============ -->
+<div class="screen" id="screen-game">
+  <div class="container">
+
+    <!-- Meta bar -->
+    <div class="game-meta" style="margin-bottom:1rem;">
+      <div class="meta-badge">Раунд: <span id="round-display">1</span></div>
+      <div class="meta-badge">Живых: <span id="alive-display">6</span></div>
+      <div class="meta-badge">Мест: <span id="bunker-spots-display">3</span></div>
+    </div>
+
+    <div class="game-layout">
+
+      <!-- Sidebar: player list -->
+      <aside class="sidebar">
+        <div class="sidebar-title">Игроки</div>
+        <div id="players-overview"></div>
+      </aside>
+
+      <!-- Main: current player card -->
+      <main>
+        <div class="player-card-main" id="current-player-card">
+          <p style="color:var(--text-muted); text-align:center; padding:2rem;">
+            Выберите игрока слева
+          </p>
+        </div>
+
+        <div class="game-actions-bar">
+          <span style="font-size:0.85rem; color:var(--text-secondary);">
+            💡 Нажмите на атрибут <strong>???</strong>, чтобы раскрыть его
+          </span>
+          <button class="btn btn-danger" id="btn-start-voting">
+            🗳️ Перейти к голосованию
+          </button>
+        </div>
+      </main>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN: VOTING ============ -->
+<div class="screen" id="screen-voting">
+  <div class="container">
+    <div class="voting-header">
+      <h2 class="voting-title">🗳️ Голосование</h2>
+      <p class="voting-subtitle">
+        Раунд <strong id="voting-round">1</strong> —
+        Нужно выгнать: <strong id="voting-eliminate">1</strong> чел.
+      </p>
+    </div>
+
+    <div id="voting-players"></div>
+
+    <div class="voting-footer">
+      <p class="voting-tip">
+        Нажимайте «Голосовать» за каждого игрока столько раз, сколько за него проголосовало.<br/>
+        Игрок(и) с наибольшим количеством голосов выбывает.
+      </p>
+      <button class="btn btn-danger btn-lg" id="btn-confirm-votes" disabled>
+        ✅ Подтвердить итоги голосования
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCREEN: RESULTS ============ -->
+<div class="screen" id="screen-results">
+  <div class="container">
+    <div class="results-header">
+      <div class="results-icon" id="results-catastrophe-icon">🛡️</div>
+      <h2 class="results-title">Игра завершена!</h2>
+      <p class="results-event">Катастрофа: <strong id="results-catastrophe">—</strong></p>
+    </div>
+
+    <div class="card">
+      <div class="results-section-title green">🏆 Выжившие — попали в бункер</div>
+      <div id="survivors-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="results-section-title red">☠️ Не попали в бункер</div>
+      <div id="eliminated-list"></div>
+    </div>
+
+    <div class="results-footer">
+      <button class="btn btn-primary btn-lg" id="btn-restart">
+        🔄 Начать новую игру
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script>
+  // Rules modal open/close
+  document.getElementById('btn-rules')?.addEventListener('click', () => {
+    document.getElementById('rules-modal').classList.add('open');
+  });
+  document.getElementById('btn-close-rules')?.addEventListener('click', () => {
+    document.getElementById('rules-modal').classList.remove('open');
+  });
+  document.getElementById('rules-modal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  });
+</script>
+
+</body>
+</html>
