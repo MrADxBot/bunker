@@ -61,7 +61,7 @@
       <li>В расширенном формате можно дополнительно обсудить, пережила бы эта команда катастрофу и случайную угрозу.</li>
     </ul>
 
-    <h3>Важное из документа</h3>
+    <h3>Советы:</h3>
     <ul>
       <li>Держите эмоции в рамках игры: вы оцениваете персонажей, а не людей.</li>
       <li>Для вашей компании можно убрать карты, которые не подходят по тематике.</li>
@@ -84,6 +84,21 @@
 
     <div class="card-actions" style="margin-top:1rem; justify-content:flex-start;">
       <button class="btn btn-secondary" id="btn-private-done">Готово, скрыть карточку</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VOTING CARD MODAL ============ -->
+<div class="modal-overlay" id="voting-card-modal">
+  <div class="modal voting-card-modal">
+    <button class="modal-close" id="btn-close-voting-card">✕</button>
+    <h2>Карточка игрока: <span id="voting-card-player-name">—</span></h2>
+    <p class="private-intro">
+      Показаны известные данные игрока. Скрытые характеристики отмечены как ???
+    </p>
+    <div class="attributes-grid" id="voting-card-content"></div>
+    <div class="card-actions" style="margin-top:1rem; justify-content:flex-start;">
+      <button class="btn btn-secondary" id="btn-voting-card-done">Закрыть</button>
     </div>
   </div>
 </div>

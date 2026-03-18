@@ -374,6 +374,28 @@ const BunkerGame = (() => {
     document.getElementById("private-player-modal")?.classList.remove("open");
   }
 
+  function openVotingPlayerCard(playerIndex) {
+    if (state.phase !== "voting") return;
+
+    const player = state.players[playerIndex];
+    if (!player) return;
+
+    const modal = document.getElementById("voting-card-modal");
+    const nameEl = document.getElementById("voting-card-player-name");
+    const contentEl = document.getElementById("voting-card-content");
+    if (!modal || !nameEl || !contentEl) return;
+
+    const attrs = getPlayerAttributes(player);
+    nameEl.textContent = player.playerName;
+    contentEl.innerHTML = attrs.map((attr) => renderAttribute(attr, player.revealed[attr.key])).join("");
+
+    modal.classList.add("open");
+  }
+
+  function closeVotingPlayerCard() {
+    document.getElementById("voting-card-modal")?.classList.remove("open");
+  }
+
   function revealFromPrivate(playerIndex, key) {
     const player = state.players[playerIndex];
     if (!player || player.isEliminated) return;
@@ -474,10 +496,14 @@ const BunkerGame = (() => {
         <div class="voting-name">${escapeHtml(player.playerName)}</div>
         <div class="voting-profession">${player.revealed.profession ? escapeHtml(player.profession.name) : "???"}</div>
         <div class="vote-count" id="vote-count-${idx}">${voteCount} голос(ов)</div>
+        <button class="btn btn-secondary btn-vote-view-card">
+          Посмотреть карточку
+        </button>
         <button class="btn btn-vote">
           🗳️ Голосовать за выбывание
         </button>
       `;
+      div.querySelector(".btn-vote-view-card")?.addEventListener("click", () => openVotingPlayerCard(idx));
       div.querySelector(".btn-vote").addEventListener("click", () => castVote(player.playerName, idx));
       container.appendChild(div);
     });
@@ -662,6 +688,12 @@ const BunkerGame = (() => {
       document.getElementById("btn-private-done")?.addEventListener("click", closePrivateView);
       document.getElementById("private-player-modal")?.addEventListener("click", (e) => {
         if (e.target === e.currentTarget) closePrivateView();
+      });
+
+      document.getElementById("btn-close-voting-card")?.addEventListener("click", closeVotingPlayerCard);
+      document.getElementById("btn-voting-card-done")?.addEventListener("click", closeVotingPlayerCard);
+      document.getElementById("voting-card-modal")?.addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) closeVotingPlayerCard();
       });
     },
   };
