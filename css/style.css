@@ -81,6 +81,151 @@ body {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   margin-bottom: 2rem;
+  position: relative;
+}
+.auth-userbar {
+  position: absolute;
+  top: 0.9rem;
+  right: 1rem;
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* ---- Auth ---- */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.auth-overlay.open {
+  display: flex;
+}
+.auth-card {
+  width: min(840px, 100%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+.auth-card h2 {
+  font-size: 1.4rem;
+  margin-bottom: 0.3rem;
+}
+.auth-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+.auth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+.auth-form {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-dark);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.auth-form h3 {
+  margin-bottom: 0.3rem;
+}
+.auth-form label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.auth-form input {
+  background: #fff;
+  border: 1px solid var(--border-accent);
+  color: var(--text-primary);
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.2rem;
+}
+.auth-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.auth-form select {
+  background: #fff;
+  border: 1px solid var(--border-accent);
+  color: var(--text-primary);
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.2rem;
+}
+.auth-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ---- Profile Page ---- */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.profile-card {
+  min-height: 220px;
+}
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.profile-row span {
+  color: var(--text-secondary);
+}
+.profile-list {
+  padding-left: 1.2rem;
+  color: var(--text-secondary);
+}
+.profile-list li {
+  margin-bottom: 0.35rem;
+}
+
+.admin-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 0.8rem;
+}
+.admin-table-wrap {
+  overflow-x: auto;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+.admin-table th,
+.admin-table td {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 0.6rem;
+  vertical-align: middle;
+}
+.admin-table th {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+.admin-role-select {
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text-primary);
+  padding: 0.4rem 0.6rem;
 }
 .game-logo {
   font-size: 3rem;
@@ -732,6 +877,20 @@ body {
   .game-title { font-size: 1.8rem; }
   .container { padding: 1.25rem 1rem; }
   .card { padding: 1rem; }
+
+  .auth-userbar {
+    position: static;
+    justify-content: center;
+    margin-bottom: 0.7rem;
+  }
+
+  .auth-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
 
   .player-add-row {
     flex-direction: column;

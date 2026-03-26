@@ -102,6 +102,13 @@ const BunkerGame = (() => {
   }
 
   function startGame() {
+    if (window.BunkerAuth && typeof window.BunkerAuth.isAuthenticated === "function") {
+      if (!window.BunkerAuth.isAuthenticated()) {
+        window.BunkerAuth.requireAuth();
+        return;
+      }
+    }
+
     const names = getPlayerNames();
     if (names.length < 2) { showNotification("Нужно минимум 2 игрока!", "warning"); return; }
 
@@ -696,7 +703,19 @@ const BunkerGame = (() => {
         if (e.target === e.currentTarget) closeVotingPlayerCard();
       });
     },
+    resetToSetup() {
+      restartGame();
+    },
   };
 })();
 
-document.addEventListener("DOMContentLoaded", () => BunkerGame.init());
+window.BunkerGame = BunkerGame;
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.BunkerAuth && typeof window.BunkerAuth.init === "function") {
+    window.BunkerAuth.init(null, { openOnUnauth: false });
+    window.BunkerGame.init();
+  } else {
+    window.BunkerGame.init();
+  }
+});

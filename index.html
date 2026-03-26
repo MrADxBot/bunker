@@ -13,6 +13,40 @@
 <!-- ============ NOTIFICATION ============ -->
 <div class="notification" id="notification"></div>
 
+<!-- ============ AUTH OVERLAY ============ -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <h2>Авторизация</h2>
+    <p class="auth-subtitle">Войдите или создайте аккаунт, чтобы начать игру</p>
+
+    <div class="auth-grid">
+      <form id="login-form" class="auth-form" autocomplete="on">
+        <h3>Вход</h3>
+        <label for="login-username">Логин</label>
+        <input type="text" id="login-username" maxlength="30" required />
+        <label for="login-password">Пароль</label>
+        <input type="password" id="login-password" maxlength="50" required />
+        <button type="submit" class="btn btn-primary">Войти</button>
+      </form>
+
+      <form id="register-form" class="auth-form" autocomplete="on">
+        <h3>Регистрация</h3>
+        <label for="register-username">Логин</label>
+        <input type="text" id="register-username" maxlength="30" required />
+        <label for="register-password">Пароль</label>
+        <input type="password" id="register-password" maxlength="50" required />
+        <label for="register-role">Роль</label>
+        <select id="register-role" required>
+          <option value="player">Игрок</option>
+          <option value="host">Ведущий</option>
+          <option value="admin">Администратор</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- ============ RULES MODAL ============ -->
 <div class="modal-overlay" id="rules-modal">
   <div class="modal">
@@ -105,6 +139,11 @@
 
 <!-- ============ HEADER ============ -->
 <header class="game-header">
+  <div class="auth-userbar">
+    <span id="auth-status">Не авторизован</span>
+    <a class="btn btn-secondary" href="profile.html" id="btn-profile">Профиль</a>
+    <button class="btn btn-secondary" id="btn-logout" style="display:none;">Выйти</button>
+  </div>
   <div class="game-logo">🛡️</div>
   <h1 class="game-title">Бункер <span class="version-badge">Beta</span></h1>
   <p class="game-subtitle">Браузерная социальная игра на выживание</p>
@@ -262,6 +301,7 @@
 </div>
 
 <script src="js/data.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/game.js"></script>
 <script>
   // Rules modal open/close
