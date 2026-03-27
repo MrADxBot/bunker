@@ -51,7 +51,7 @@
 <div class="modal-overlay" id="rules-modal">
   <div class="modal">
     <button class="modal-close" id="btn-close-rules">✕</button>
-    <h2>📖 Правила игры «Бункер»</h2>
+    <h2>Правила игры «Бункер»</h2>
 
     <h3>Сюжет и цель</h3>
     <p>На Земле глобальная катастрофа. В бункер попадёт только часть группы, остальные останутся снаружи. Ваша задача — убедить других, что именно ваш персонаж полезен для выживания и восстановления жизни после выхода из бункера.</p>
@@ -108,7 +108,7 @@
 <div class="modal-overlay" id="private-player-modal">
   <div class="modal private-modal">
     <button class="modal-close" id="btn-close-private">✕</button>
-    <h2>🙈 Приватная карточка игрока</h2>
+    <h2>Приватная карточка игрока</h2>
     <p class="private-intro">
       Передайте устройство игроку <strong id="private-player-name">—</strong>. Только он должен смотреть этот экран.
     </p>
@@ -155,7 +155,7 @@
 
     <div class="setup-grid" style="grid-template-columns: 1fr;">
       <div class="card">
-        <div class="section-title">🌐 Онлайн-комната</div>
+        <div class="section-title">Онлайн-комната</div>
         <div class="room-form-grid">
           <div class="room-field">
             <label for="room-username-input">Ваше имя в комнате</label>
@@ -171,7 +171,6 @@
           <button class="btn btn-secondary" id="btn-room-join">Войти по коду</button>
           <button class="btn btn-danger" id="btn-room-leave" disabled>Выйти из комнаты</button>
         </div>
-        <p class="room-status" id="room-status">Офлайн режим: игра только на этом устройстве.</p>
         <div class="room-members-wrap" id="room-members-wrap" style="display:none;">
           <p class="room-members-title">Участники онлайн</p>
           <div class="room-members" id="room-members"></div>
@@ -193,10 +192,10 @@
 
     <div class="setup-footer">
       <button class="btn btn-secondary" id="btn-rules" style="margin-right:1rem;">
-        📖 Правила
+        Правила
       </button>
       <button class="btn btn-primary btn-lg" id="btn-start-game" disabled>
-        🚀 Начать игру
+        Начать игру
       </button>
     </div>
   </div>
@@ -205,12 +204,12 @@
 <!-- ============ SCREEN: CATASTROPHE ============ -->
 <div class="screen" id="screen-catastrophe">
   <div class="container catastrophe-screen">
-    <div class="catastrophe-icon-big" id="catastrophe-icon">☢️</div>
+    <div class="catastrophe-icon-big" id="catastrophe-icon">🛡️</div>
     <h2 class="catastrophe-title" id="catastrophe-title">Ядерная война</h2>
     <p class="catastrophe-desc" id="catastrophe-description">Описание катастрофы...</p>
 
     <div class="bunker-info-box">
-      <div class="bunker-info-title">🏠 Бункер</div>
+      <div class="bunker-info-title">Бункер</div>
       <p class="bunker-info-text" id="bunker-description">Описание бункера...</p>
       <div class="bunker-stats">
         <div class="bunker-stat">
@@ -229,7 +228,7 @@
     </div>
 
     <button class="btn btn-primary btn-lg" id="btn-proceed-game">
-      🃏 Раздать карточки и начать!
+      Раздать карточки и начать!
     </button>
   </div>
 </div>
@@ -263,7 +262,7 @@
 
         <div class="game-actions-bar">
           <span style="font-size:0.85rem; color:var(--text-secondary);">
-            💡 В каждом раунде игрок раскрывает только 1 атрибут (в 1-м раунде — профессию)
+            В каждом раунде игрок раскрывает только 1 атрибут (в 1-м раунде — профессию)
           </span>
         </div>
       </main>
@@ -276,7 +275,7 @@
 <div class="screen" id="screen-voting">
   <div class="container">
     <div class="voting-header">
-      <h2 class="voting-title">🗳️ Голосование</h2>
+      <h2 class="voting-title">Голосование</h2>
       <p class="voting-subtitle">
         Раунд <strong id="voting-round">1</strong> —
         Выбывает: <strong id="voting-eliminate">1</strong> чел.
@@ -291,7 +290,7 @@
         При ничьей проводится переголосование между лидерами.
       </p>
       <button class="btn btn-danger btn-lg" id="btn-confirm-votes" disabled>
-        ✅ Подтвердить итоги голосования
+        Подтвердить итоги голосования
       </button>
     </div>
   </div>
@@ -307,21 +306,21 @@
     </div>
 
     <div class="card">
-      <div class="results-section-title green">🏆 Выжившие — попали в бункер</div>
+      <div class="results-section-title green">Выжившие — попали в бункер</div>
       <div id="survivors-list"></div>
     </div>
 
     <div class="card">
-      <div class="results-section-title red">☠️ Не попали в бункер</div>
+      <div class="results-section-title red">Не попали в бункер</div>
       <div id="eliminated-list"></div>
     </div>
 
     <div class="results-footer">
       <button class="btn btn-primary btn-lg" id="btn-restart">
-        🔄 Начать новую игру
+        Начать новую игру
       </button>
       <button class="btn btn-secondary btn-lg" id="btn-back-menu" style="margin-left:0.75rem;">
-        🏠 Выйти в главное меню
+        Выйти в главное меню
       </button>
     </div>
   </div>

@@ -600,11 +600,11 @@ const BunkerGame = (() => {
 
   function getPlayerAttributes(player) {
     return [
-      { key: "profession", icon: "💼", label: "Профессия", value: player.profession.name, desc: player.profession.description },
-      { key: "health", icon: "❤️", label: "Здоровье", value: player.health.name, desc: "" },
-      { key: "hobby", icon: "🎯", label: "Хобби", value: player.hobby.name, desc: "" },
-      { key: "luggage", icon: "🎒", label: "Багаж", value: player.luggage.name, desc: "" },
-      { key: "phobiaFact", icon: "🔮", label: "Факт/Фобия", value: player.phobiaFact.name, desc: "" },
+      { key: "profession", icon: "П", label: "Профессия", value: player.profession.name, desc: player.profession.description },
+      { key: "health", icon: "З", label: "Здоровье", value: player.health.name, desc: "" },
+      { key: "hobby", icon: "Х", label: "Хобби", value: player.hobby.name, desc: "" },
+      { key: "luggage", icon: "Б", label: "Багаж", value: player.luggage.name, desc: "" },
+      { key: "phobiaFact", icon: "Ф", label: "Факт/Фобия", value: player.phobiaFact.name, desc: "" },
       { key: "actionCard", icon: player.actionCard.icon, label: "Карта действия", value: player.actionCard.name, desc: player.actionCard.description },
     ];
   }
@@ -681,8 +681,8 @@ const BunkerGame = (() => {
         ${attrs.map((attr) => renderAttribute(attr, player.revealed[attr.key])).join("")}
       </div>
       <div class="card-actions">
-        ${isSelfPlayer ? `<button class="btn btn-secondary" id="btn-private-view">🙈 Мои карты (приватно)</button>` : ""}
-        ${isSelfPlayer && state.phase === "game" && !alreadyPlayedThisRound ? `<button class="btn btn-primary" id="btn-next-player-card" ${isOnline ? "" : (state.turnRevealed ? "" : "disabled")}>✅ Завершить ход</button>` : ""}
+        ${isSelfPlayer ? `<button class="btn btn-secondary" id="btn-private-view">Мои карты (приватно)</button>` : ""}
+        ${isSelfPlayer && state.phase === "game" && !alreadyPlayedThisRound ? `<button class="btn btn-primary" id="btn-next-player-card" ${isOnline ? "" : (state.turnRevealed ? "" : "disabled")}>Завершить ход</button>` : ""}
       </div>
     `;
 
@@ -848,7 +848,7 @@ const BunkerGame = (() => {
     } else {
       return `
         <div class="attribute-card hidden" data-key="${attr.key}" title="Нажмите, чтобы раскрыть">
-          <div class="attr-icon">❓</div>
+          <div class="attr-icon">?</div>
           <div class="attr-label">${attr.label}</div>
           <div class="attr-value">???</div>
         </div>
@@ -931,7 +931,7 @@ const BunkerGame = (() => {
           Посмотреть карточку
         </button>
         <button class="btn btn-vote" ${hasVotedOnline ? "disabled" : ""}>
-          🗳️ Голосовать за выбывание
+          Голосовать за выбывание
         </button>
       `;
       div.querySelector(".btn-vote-view-card")?.addEventListener("click", () => openVotingPlayerCard(idx));
@@ -1062,12 +1062,12 @@ const BunkerGame = (() => {
           <div class="result-name">${escapeHtml(player.playerName)}</div>
           <div class="result-profession">${escapeHtml(player.profession.name)}</div>
           <div class="result-attrs">
-            <span>❤️ ${escapeHtml(player.health.name)}</span>
-            <span>🎯 ${escapeHtml(player.hobby.name)}</span>
-            <span>🎒 ${escapeHtml(player.luggage.name)}</span>
+            <span>Здоровье: ${escapeHtml(player.health.name)}</span>
+            <span>Хобби: ${escapeHtml(player.hobby.name)}</span>
+            <span>Багаж: ${escapeHtml(player.luggage.name)}</span>
           </div>
         </div>
-        <div class="result-badge">🏆 В бункере!</div>
+        <div class="result-badge">В бункере</div>
       `;
       survivorContainer.appendChild(div);
     });
@@ -1084,7 +1084,7 @@ const BunkerGame = (() => {
           <div class="result-name">${escapeHtml(player.playerName)}</div>
           <div class="result-profession">${escapeHtml(player.profession.name)}</div>
         </div>
-        <div class="result-badge-out">☠️ Не попал</div>
+        <div class="result-badge-out">Не попал</div>
       `;
       eliminatedContainer.appendChild(div);
     });
