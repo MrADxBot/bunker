@@ -69,7 +69,7 @@
       <li>Добавьте игроков (от 2 до 12 человек).</li>
       <li>Каждый получает характеристики персонажа: профессию, здоровье, хобби, багаж, факт/фобию и карту действия.</li>
       <li>Откройте случайную катастрофу и описание бункера.</li>
-      <li>В этой версии приложения вместимость бункера вычисляется автоматически: половина игроков (округление вверх).</li>
+      <li>В этой версии приложения вместимость бункера вычисляется автоматически: половина игроков (округление вверх), но при 3 игроках в бункер попадает только 1.</li>
     </ul>
 
     <h3>Структура раунда (по материалам документа)</h3>
@@ -155,8 +155,32 @@
 
     <div class="setup-grid" style="grid-template-columns: 1fr;">
       <div class="card">
+        <div class="section-title">🌐 Онлайн-комната</div>
+        <div class="room-form-grid">
+          <div class="room-field">
+            <label for="room-username-input">Ваше имя в комнате</label>
+            <input type="text" id="room-username-input" maxlength="30" placeholder="Например: Артём" autocomplete="off" />
+          </div>
+          <div class="room-field">
+            <label for="room-code-input">Код комнаты</label>
+            <input type="text" id="room-code-input" maxlength="6" placeholder="Например: A7K2Q9" autocomplete="off" />
+          </div>
+        </div>
+        <div class="room-actions">
+          <button class="btn btn-primary" id="btn-room-create">Создать комнату</button>
+          <button class="btn btn-secondary" id="btn-room-join">Войти по коду</button>
+          <button class="btn btn-danger" id="btn-room-leave" disabled>Выйти из комнаты</button>
+        </div>
+        <p class="room-status" id="room-status">Офлайн режим: игра только на этом устройстве.</p>
+        <div class="room-members-wrap" id="room-members-wrap" style="display:none;">
+          <p class="room-members-title">Участники онлайн</p>
+          <div class="room-members" id="room-members"></div>
+        </div>
+      </div>
+
+      <div class="card" id="players-setup-card">
         <div class="section-title">👥 Игроки</div>
-        <div class="player-add-row">
+        <div class="player-add-row" id="player-add-row">
           <input type="text" id="player-name-input" placeholder="Имя игрока..." maxlength="30" autocomplete="off" />
           <button class="btn btn-primary" id="btn-add-player">+ Добавить</button>
         </div>
@@ -296,12 +320,16 @@
       <button class="btn btn-primary btn-lg" id="btn-restart">
         🔄 Начать новую игру
       </button>
+      <button class="btn btn-secondary btn-lg" id="btn-back-menu" style="margin-left:0.75rem;">
+        🏠 Выйти в главное меню
+      </button>
     </div>
   </div>
 </div>
 
 <script src="js/data.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/rooms.js"></script>
 <script src="js/game.js"></script>
 <script>
   // Rules modal open/close

@@ -367,6 +367,82 @@ body {
   gap: 1.5rem;
 }
 
+.room-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.room-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.room-field label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.room-field input {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-accent);
+  color: var(--text-primary);
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+}
+
+.room-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.room-actions {
+  margin-top: 0.9rem;
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.room-status {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.room-members-wrap {
+  margin-top: 0.65rem;
+}
+
+.room-members-title {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.room-members {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.room-member-chip {
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 0.26rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+.room-member-chip.host {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
 .player-add-row {
   display: flex;
   gap: 0.5rem;
@@ -894,6 +970,10 @@ body {
 
   .player-add-row {
     flex-direction: column;
+  }
+
+  .room-actions .btn {
+    width: 100%;
   }
 
   .player-add-row .btn {
