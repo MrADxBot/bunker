@@ -36,11 +36,14 @@ const BunkerRooms = (() => {
       body: JSON.stringify(payload),
     });
 
+    const rawText = await res.text();
     let data = {};
     try {
-      data = await res.json();
+      data = rawText ? JSON.parse(rawText) : {};
     } catch {
-      throw new Error("Сервер вернул некорректный ответ");
+      const snippet = rawText.replace(/\s+/g, " ").slice(0, 140);
+      const suffix = snippet ? `: ${snippet}` : "";
+      throw new Error(`Сервер вернул некорректный ответ (HTTP ${res.status})${suffix}`);
     }
 
     if (!res.ok || !data.ok) {
@@ -71,6 +74,7 @@ const BunkerRooms = (() => {
     state.members = normalized.members;
     state.game = normalized.game;
 
+    // Роль хоста определяем по списку участников, а не по локальному кешу.
     const me = state.members.find((m) => m.clientId === state.clientId);
     state.isHost = Boolean(me && me.isHost);
 
@@ -109,6 +113,7 @@ const BunkerRooms = (() => {
 
   function startPolling() {
     clearPolling();
+    // Polling нужен как простой transport-синк: клиент регулярно подтягивает актуальный снимок комнаты.
     state.pollTimer = setInterval(async () => {
       if (!state.connected) return;
       try {
@@ -122,6 +127,7 @@ const BunkerRooms = (() => {
         clearPolling();
         const message = err instanceof Error ? err.message : "Ошибка синхронизации комнаты";
         notifyError(message);
+        // Если сервер говорит, что участник исключён/не состоит в комнате, чистим локальное подключение.
         if (message.includes("не состоит")) {
           disconnectLocal(false);
         }
@@ -187,6 +193,7 @@ const BunkerRooms = (() => {
         clientId: state.clientId,
       });
     } finally {
+      // Даже при сетевой ошибке закрываем локальную сессию, чтобы UI не зависал в "подключено".
       disconnectLocal(true);
     }
   }

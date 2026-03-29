@@ -1,25 +1,12 @@
 // ==================== BUNKER GAME LOGIC ====================
 
 const BunkerGame = (() => {
+  const Utils = window.BunkerGameUtils;
+
   // ---- State ----
-  let state = {
-    phase: "setup",        // setup | catastrophe | game | voting | results
-    players: [],           // array of player card objects
-    catastrophe: null,
-    bunkerCapacity: 0,
-    currentPlayerIndex: 0,
-    round: 1,
-    votingResults: {},
-    survivorCount: 0,
-    eliminatedPlayers: [],
-    activeActionCard: null,
-    roundPlayedPlayers: {},
-    turnRevealed: false,
-    tieCandidates: [],
-  };
+  let state = Utils.createInitialState();
 
   let roomUiReady = false;
-  let roomSyncApplying = false;
   let privateModalPlayerIndex = null;
 
   const $ = (sel) => document.querySelector(sel);
@@ -57,7 +44,7 @@ const BunkerGame = (() => {
       div.className = "player-entry";
       div.innerHTML = `
         <span class="player-num">${i + 1}</span>
-        <span class="player-name-display">${escapeHtml(name)}</span>
+        <span class="player-name-display">${Utils.escapeHtml(name)}</span>
         <button class="btn-icon btn-remove" data-index="${i}" title="Удалить" ${canEdit ? "" : "disabled"}>✕</button>
       `;
       container.appendChild(div);
@@ -94,7 +81,7 @@ const BunkerGame = (() => {
     return !isConnectedRoom();
   }
 
-  async function addPlayer() {
+  function addPlayer() {
     if (isConnectedRoom()) {
       showNotification("В онлайн-комнате список формируется автоматически по участникам", "warning");
       return;
@@ -114,7 +101,7 @@ const BunkerGame = (() => {
     updateStartButton();
   }
 
-  async function removePlayer(index) {
+  function removePlayer(index) {
     if (isConnectedRoom()) {
       showNotification("В онлайн-комнате список формируется автоматически по участникам", "warning");
       return;
@@ -133,6 +120,7 @@ const BunkerGame = (() => {
 
     const names = getPlayerNames();
     const room = getRoomState();
+    // Старт разрешён только хосту в онлайн-комнате и только при >= 2 игроках.
     btn.disabled = !room.connected || names.length < 2 || !room.isHost;
     if (addBtn) {
       addBtn.disabled = true;
@@ -164,7 +152,7 @@ const BunkerGame = (() => {
     membersContainer.innerHTML = members.map((member) => {
       const classes = `room-member-chip ${member.isHost ? "host" : ""}`.trim();
       const suffix = member.isHost ? " (хост)" : "";
-      return `<span class="${classes}">${escapeHtml(member.username)}${suffix}</span>`;
+      return `<span class="${classes}">${Utils.escapeHtml(member.username)}${suffix}</span>`;
     }).join("");
   }
 
@@ -266,11 +254,12 @@ const BunkerGame = (() => {
 
     window.BunkerRooms.init({
       onRoomUpdate: (payload) => {
+        // В setup состояние игроков полностью приходит с сервера комнаты.
         if (state.phase === "setup") {
-          roomSyncApplying = true;
           setPlayerNames(payload.players || []);
-          roomSyncApplying = false;
         }
+
+        // Если игра уже запущена у хоста, применяем удалённый снимок фазы.
         if (payload.game) {
           applyRemoteGameState(payload.game);
           refreshPrivateModalIfOpen();
@@ -327,6 +316,7 @@ const BunkerGame = (() => {
       return;
     }
 
+    // Полностью гидратируем локальный state снимком от сервера, чтобы не копить рассинхрон.
     state.players = players;
     state.catastrophe = catastrophe;
     state.bunkerCapacity = bunkerCapacity;
@@ -365,8 +355,10 @@ const BunkerGame = (() => {
         const selfIdx = state.players.findIndex((p) => p.playerName === room.username && !p.isEliminated);
 
         if (enteredNewRound) {
+          // На старте нового раунда фокусируем карточку текущего пользователя.
           state.currentPlayerIndex = selfIdx;
         } else {
+          // Во время polling сохраняем выбранную карточку, если она всё ещё валидна.
           const stillValid = Number.isInteger(prevSelectedIndex)
             && prevSelectedIndex >= 0
             && prevSelectedIndex < state.players.length
@@ -417,24 +409,7 @@ const BunkerGame = (() => {
   }
 
   function applyRemoteLobbyState(roomPlayers) {
-    state = {
-      phase: "setup",
-      players: [],
-      catastrophe: null,
-      bunkerCapacity: 0,
-      currentPlayerIndex: 0,
-      round: 1,
-      votingResults: {},
-      survivorCount: 0,
-      eliminatedPlayers: [],
-      activeActionCard: null,
-      roundPlayedPlayers: {},
-      turnRevealed: false,
-      tieCandidates: [],
-      _voterChoices: {},
-      _revealsThisRound: {},
-      _playerNames: Array.isArray(roomPlayers) ? roomPlayers.slice() : [],
-    };
+    state = Utils.createInitialState(roomPlayers);
     initSetup();
     showNotification("Хост начал новую игру", "info");
   }
@@ -566,8 +541,8 @@ const BunkerGame = (() => {
       div.className = `mini-player-card ${player.isEliminated ? "eliminated" : ""} ${i === state.currentPlayerIndex && !player.isEliminated ? "active" : ""}`;
       div.id = `mini-card-${i}`;
       div.innerHTML = `
-        <span class="mini-avatar">${getAvatarEmoji(i)}</span>
-        <span class="mini-name">${escapeHtml(player.playerName)}</span>
+        <span class="mini-avatar">${Utils.getAvatarEmoji(i)}</span>
+        <span class="mini-name">${Utils.escapeHtml(player.playerName)}</span>
         ${player.isEliminated ? '<span class="mini-status eliminated-badge">Выбыл</span>' : ""}
       `;
       div.addEventListener("click", () => {
@@ -589,28 +564,16 @@ const BunkerGame = (() => {
     document.getElementById("bunker-spots-display").textContent = state.bunkerCapacity;
   }
 
-  function getAvatarEmoji(index) {
-    const avatars = ["👨", "👩", "🧔", "👩‍🦰", "👨‍🦱", "👩‍🦱", "🧓", "👵", "👦", "👧", "🧑", "👩‍🦳"];
-    return avatars[index % avatars.length];
-  }
-
   function canRevealKey(key) {
-    return state.round === 1 ? key === "profession" : true;
+    return Utils.canRevealKey(state.round, key);
   }
 
   function getPlayerAttributes(player) {
-    return [
-      { key: "profession", icon: "П", label: "Профессия", value: player.profession.name, desc: player.profession.description },
-      { key: "health", icon: "З", label: "Здоровье", value: player.health.name, desc: "" },
-      { key: "hobby", icon: "Х", label: "Хобби", value: player.hobby.name, desc: "" },
-      { key: "luggage", icon: "Б", label: "Багаж", value: player.luggage.name, desc: "" },
-      { key: "phobiaFact", icon: "Ф", label: "Факт/Фобия", value: player.phobiaFact.name, desc: "" },
-      { key: "actionCard", icon: player.actionCard.icon, label: "Карта действия", value: player.actionCard.name, desc: player.actionCard.description },
-    ];
+    return Utils.getPlayerAttributes(player);
   }
 
   function hasRevealableAttributes(player) {
-    return getPlayerAttributes(player).some((a) => !player.revealed[a.key] && canRevealKey(a.key));
+    return Utils.hasRevealableAttributes(player, state.round);
   }
 
   function showCurrentPlayerCard() {
@@ -658,7 +621,6 @@ const BunkerGame = (() => {
     const room = getRoomState();
     const isOnline = Boolean(room.connected);
     const isSelfPlayer = isOnline ? player.playerName === room.username : playerIndex === state.currentPlayerIndex;
-    const isCurrentTurn = !isOnline ? playerIndex === state.currentPlayerIndex : isSelfPlayer;
     const alreadyPlayedThisRound = isOnline && Boolean(state.roundPlayedPlayers && state.roundPlayedPlayers[String(playerIndex)]);
 
     const attrs = getPlayerAttributes(player);
@@ -668,9 +630,9 @@ const BunkerGame = (() => {
 
     cardDiv.innerHTML = `
       <div class="player-card-header">
-        <div class="player-card-avatar">${getAvatarEmoji(playerIndex)}</div>
+        <div class="player-card-avatar">${Utils.getAvatarEmoji(playerIndex)}</div>
         <div class="player-card-info">
-          <h2 class="player-card-name">${escapeHtml(player.playerName)}</h2>
+          <h2 class="player-card-name">${Utils.escapeHtml(player.playerName)}</h2>
           <div class="reveal-progress">
             <div class="reveal-bar" style="width: ${(revealedCount / totalAttrs) * 100}%"></div>
           </div>
@@ -727,6 +689,7 @@ const BunkerGame = (() => {
       ? "В 1-м раунде для раскрытия доступна только Профессия."
       : "Выберите 1 атрибут, который раскроете всем игрокам в этом раунде.";
 
+    // В онлайн-режиме лимит раскрытий берём из серверного флага, офлайн — из локального.
     const revealedThisRound = isConnectedRoom()
       ? Boolean(state._revealsThisRound && state._revealsThisRound[String(playerIndex)])
       : state.turnRevealed;
@@ -745,8 +708,8 @@ const BunkerGame = (() => {
             <span>${attr.icon}</span>
             <strong>${attr.label}</strong>
           </div>
-          <div class="private-attr-value">${escapeHtml(attr.value)}</div>
-          ${attr.desc ? `<div class="private-attr-desc">${escapeHtml(attr.desc)}</div>` : ""}
+          <div class="private-attr-value">${Utils.escapeHtml(attr.value)}</div>
+          ${attr.desc ? `<div class="private-attr-desc">${Utils.escapeHtml(attr.desc)}</div>` : ""}
           <div class="private-attr-actions">
             <button class="btn btn-primary btn-reveal-choice" data-key="${attr.key}" ${canReveal ? "" : "disabled"}>
               Раскрыть всем
@@ -820,6 +783,7 @@ const BunkerGame = (() => {
 
     if (isConnectedRoom()) {
       try {
+        // Решение о валидности раскрытия принимает сервер (фаза, лимиты, очередь хода).
         await window.BunkerRooms.gameAction("revealAttribute", { key });
         refreshPrivateModalIfOpen();
       } catch (err) {
@@ -841,8 +805,8 @@ const BunkerGame = (() => {
         <div class="attribute-card revealed" data-key="${attr.key}">
           <div class="attr-icon">${attr.icon}</div>
           <div class="attr-label">${attr.label}</div>
-          <div class="attr-value">${escapeHtml(attr.value)}</div>
-          ${attr.desc ? `<div class="attr-desc">${escapeHtml(attr.desc)}</div>` : ""}
+          <div class="attr-value">${Utils.escapeHtml(attr.value)}</div>
+          ${attr.desc ? `<div class="attr-desc">${Utils.escapeHtml(attr.desc)}</div>` : ""}
         </div>
       `;
     } else {
@@ -914,6 +878,7 @@ const BunkerGame = (() => {
 
     const room = getRoomState();
     const isOnline = Boolean(room.connected);
+    // В онлайне 1 клиент = 1 голос за раунд, повторное голосование блокируем по clientId.
     const hasVotedOnline = isOnline && Boolean(state._voterChoices && state._voterChoices[room.clientId]);
 
     votingPool.forEach((player, i) => {
@@ -923,9 +888,9 @@ const BunkerGame = (() => {
       div.className = "voting-player-card";
       div.id = `vote-card-${idx}`;
       div.innerHTML = `
-        <div class="voting-avatar">${getAvatarEmoji(idx)}</div>
-        <div class="voting-name">${escapeHtml(player.playerName)}</div>
-        <div class="voting-profession">${player.revealed.profession ? escapeHtml(player.profession.name) : "???"}</div>
+        <div class="voting-avatar">${Utils.getAvatarEmoji(idx)}</div>
+        <div class="voting-name">${Utils.escapeHtml(player.playerName)}</div>
+        <div class="voting-profession">${player.revealed.profession ? Utils.escapeHtml(player.profession.name) : "???"}</div>
         <div class="vote-count" id="vote-count-${idx}">${voteCount} голос(ов)</div>
         <button class="btn btn-secondary btn-vote-view-card">
           Посмотреть карточку
@@ -955,6 +920,7 @@ const BunkerGame = (() => {
   async function castVote(playerName, playerIndex) {
     if (isConnectedRoom()) {
       try {
+        // Отправляем только цель голоса; сервер сам обновляет агрегированные счётчики.
         await window.BunkerRooms.gameAction("castVote", { targetName: playerName });
         showNotification(`Ваш голос за ${playerName} принят`, "info");
       } catch (err) {
@@ -1057,14 +1023,14 @@ const BunkerGame = (() => {
       div.className = "result-card survivor";
       div.innerHTML = `
         <div class="result-rank">${i + 1}</div>
-        <div class="result-avatar">${getAvatarEmoji(idx)}</div>
+        <div class="result-avatar">${Utils.getAvatarEmoji(idx)}</div>
         <div class="result-info">
-          <div class="result-name">${escapeHtml(player.playerName)}</div>
-          <div class="result-profession">${escapeHtml(player.profession.name)}</div>
+          <div class="result-name">${Utils.escapeHtml(player.playerName)}</div>
+          <div class="result-profession">${Utils.escapeHtml(player.profession.name)}</div>
           <div class="result-attrs">
-            <span>Здоровье: ${escapeHtml(player.health.name)}</span>
-            <span>Хобби: ${escapeHtml(player.hobby.name)}</span>
-            <span>Багаж: ${escapeHtml(player.luggage.name)}</span>
+            <span>Здоровье: ${Utils.escapeHtml(player.health.name)}</span>
+            <span>Хобби: ${Utils.escapeHtml(player.hobby.name)}</span>
+            <span>Багаж: ${Utils.escapeHtml(player.luggage.name)}</span>
           </div>
         </div>
         <div class="result-badge">В бункере</div>
@@ -1079,10 +1045,10 @@ const BunkerGame = (() => {
       const div = document.createElement("div");
       div.className = "result-card eliminated";
       div.innerHTML = `
-        <div class="result-avatar dim">${getAvatarEmoji(idx)}</div>
+        <div class="result-avatar dim">${Utils.getAvatarEmoji(idx)}</div>
         <div class="result-info">
-          <div class="result-name">${escapeHtml(player.playerName)}</div>
-          <div class="result-profession">${escapeHtml(player.profession.name)}</div>
+          <div class="result-name">${Utils.escapeHtml(player.playerName)}</div>
+          <div class="result-profession">${Utils.escapeHtml(player.profession.name)}</div>
         </div>
         <div class="result-badge-out">Не попал</div>
       `;
@@ -1106,24 +1072,7 @@ const BunkerGame = (() => {
       return;
     }
 
-    state = {
-      phase: "setup",
-      players: [],
-      catastrophe: null,
-      bunkerCapacity: 0,
-      currentPlayerIndex: 0,
-      round: 1,
-      votingResults: {},
-      survivorCount: 0,
-      eliminatedPlayers: [],
-      activeActionCard: null,
-      roundPlayedPlayers: {},
-      turnRevealed: false,
-      tieCandidates: [],
-      _voterChoices: {},
-      _revealsThisRound: {},
-      _playerNames: room.connected ? (room.players || []).slice() : [],
-    };
+    state = Utils.createInitialState();
     initSetup();
   }
 
@@ -1139,45 +1088,14 @@ const BunkerGame = (() => {
       return;
     }
 
-    state = {
-      phase: "setup",
-      players: [],
-      catastrophe: null,
-      bunkerCapacity: 0,
-      currentPlayerIndex: 0,
-      round: 1,
-      votingResults: {},
-      survivorCount: 0,
-      eliminatedPlayers: [],
-      activeActionCard: null,
-      roundPlayedPlayers: {},
-      turnRevealed: false,
-      tieCandidates: [],
-      _voterChoices: {},
-      _revealsThisRound: {},
-      _playerNames: [],
-    };
+    state = Utils.createInitialState();
     initSetup();
-  }
-
-  // ---- Utilities ----
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  function escapeJs(str) {
-    return String(str).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   }
 
   // ---- Public API ----
   return {
     init() {
-      state._playerNames = [];
+      state = Utils.createInitialState();
       initSetup();
       bindRoomEvents();
       renderRoomState();

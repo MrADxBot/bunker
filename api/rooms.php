@@ -3,21 +3,58 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
 
 const ROOM_TTL_SECONDS = 40;
 const ROOM_CODE_LENGTH = 6;
 const MAX_PLAYERS = 12;
 
 $dataDir = __DIR__ . '/data/rooms';
-if (!is_dir($dataDir)) {
-    mkdir($dataDir, 0777, true);
-}
 
 function respond(array $payload, int $statusCode = 200): void
 {
     http_response_code($statusCode);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+
+    respond([
+        'ok' => false,
+        'error' => 'Внутренняя ошибка сервера',
+        'details' => sprintf('%s in %s:%d', $message, basename($file), $line),
+    ], 500);
+});
+
+set_exception_handler(static function (Throwable $e): void {
+    respond([
+        'ok' => false,
+        'error' => 'Внутренняя ошибка сервера',
+        'details' => $e->getMessage(),
+    ], 500);
+});
+
+if (!is_dir($dataDir)) {
+    if (!mkdir($dataDir, 0777, true) && !is_dir($dataDir)) {
+        respond([
+            'ok' => false,
+            'error' => 'Не удалось создать каталог для комнат',
+            'details' => $dataDir,
+        ], 500);
+    }
+}
+
+if (!is_writable($dataDir)) {
+    respond([
+        'ok' => false,
+        'error' => 'Каталог комнат недоступен для записи',
+        'details' => $dataDir,
+    ], 500);
 }
 
 function randomCode(int $length): string
