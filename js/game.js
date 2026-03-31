@@ -18,7 +18,10 @@ const BunkerGame = (() => {
     tieCandidates: [],
   };
 
-  // ---- DOM helpers ----
+  let roomUiReady = false;
+  let roomSyncApplying = false;
+  let privateModalPlayerIndex = null;
+
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
@@ -37,16 +40,17 @@ const BunkerGame = (() => {
     notif._timeout = setTimeout(() => notif.classList.remove("show"), 3500);
   }
 
-  // ---- Setup Phase ----
   function initSetup() {
     showScreen("screen-setup");
     renderPlayerList();
+    renderRoomState();
     updateStartButton();
   }
 
   function renderPlayerList() {
     const container = document.getElementById("player-list");
     const players = getPlayerNames();
+    const canEdit = canEditPlayers();
     container.innerHTML = "";
     players.forEach((name, i) => {
       const div = document.createElement("div");
@@ -54,7 +58,7 @@ const BunkerGame = (() => {
       div.innerHTML = `
         <span class="player-num">${i + 1}</span>
         <span class="player-name-display">${escapeHtml(name)}</span>
-        <button class="btn-icon btn-remove" data-index="${i}" title="Удалить">✕</button>
+        <button class="btn-icon btn-remove" data-index="${i}" title="Удалить" ${canEdit ? "" : "disabled"}>✕</button>
       `;
       container.appendChild(div);
     });
@@ -69,7 +73,33 @@ const BunkerGame = (() => {
     return (state._playerNames = state._playerNames || []);
   }
 
-  function addPlayer() {
+  function setPlayerNames(names) {
+    state._playerNames = Array.isArray(names) ? names.slice() : [];
+    renderPlayerList();
+    updateStartButton();
+  }
+
+  function getRoomState() {
+    if (!window.BunkerRooms || typeof window.BunkerRooms.getState !== "function") {
+      return { connected: false, isHost: false, roomCode: "", username: "", members: [] };
+    }
+    return window.BunkerRooms.getState();
+  }
+
+  function isConnectedRoom() {
+    return Boolean(getRoomState().connected);
+  }
+
+  function canEditPlayers() {
+    return !isConnectedRoom();
+  }
+
+  async function addPlayer() {
+    if (isConnectedRoom()) {
+      showNotification("В онлайн-комнате список формируется автоматически по участникам", "warning");
+      return;
+    }
+
     const input = document.getElementById("player-name-input");
     const name = input.value.trim();
     if (!name) { showNotification("Введите имя игрока!", "warning"); return; }
@@ -84,29 +114,344 @@ const BunkerGame = (() => {
     updateStartButton();
   }
 
-  function removePlayer(index) {
+  async function removePlayer(index) {
+    if (isConnectedRoom()) {
+      showNotification("В онлайн-комнате список формируется автоматически по участникам", "warning");
+      return;
+    }
+
     const names = getPlayerNames();
     names.splice(index, 1);
     renderPlayerList();
     updateStartButton();
   }
 
-
-  // updateCapacityDisplay удалён — capacity теперь вычисляется автоматически
-
-
   function updateStartButton() {
     const btn = document.getElementById("btn-start-game");
+    const addBtn = document.getElementById("btn-add-player");
+    if (!btn) return;
+
     const names = getPlayerNames();
-    btn.disabled = names.length < 2;
+    const room = getRoomState();
+    btn.disabled = !room.connected || names.length < 2 || !room.isHost;
+    if (addBtn) {
+      addBtn.disabled = true;
+      addBtn.style.display = "none";
+    }
+
+    const nameInput = document.getElementById("player-name-input");
+    if (nameInput) {
+      nameInput.disabled = true;
+      nameInput.style.display = "none";
+    }
+
+    const addRow = document.getElementById("player-add-row");
+    if (addRow) addRow.style.display = "none";
+  }
+
+  function renderRoomMembers(members) {
+    const membersWrap = document.getElementById("room-members-wrap");
+    const membersContainer = document.getElementById("room-members");
+    if (!membersWrap || !membersContainer) return;
+
+    if (!members || members.length === 0) {
+      membersWrap.style.display = "none";
+      membersContainer.innerHTML = "";
+      return;
+    }
+
+    membersWrap.style.display = "block";
+    membersContainer.innerHTML = members.map((member) => {
+      const classes = `room-member-chip ${member.isHost ? "host" : ""}`.trim();
+      const suffix = member.isHost ? " (хост)" : "";
+      return `<span class="${classes}">${escapeHtml(member.username)}${suffix}</span>`;
+    }).join("");
+  }
+
+  function renderRoomState() {
+    const room = getRoomState();
+    const statusEl = document.getElementById("room-status");
+    const codeInput = document.getElementById("room-code-input");
+    const usernameInput = document.getElementById("room-username-input");
+    const createBtn = document.getElementById("btn-room-create");
+    const joinBtn = document.getElementById("btn-room-join");
+    const leaveBtn = document.getElementById("btn-room-leave");
+    const playersCard = document.getElementById("players-setup-card");
+
+    if (!statusEl || !codeInput || !usernameInput || !createBtn || !joinBtn || !leaveBtn) return;
+
+    if (room.connected) {
+      statusEl.textContent = `Вы в комнате ${room.roomCode}. Игроки добавляются автоматически при подключении к лобби.`;
+      codeInput.value = room.roomCode;
+      usernameInput.value = room.username;
+      createBtn.disabled = true;
+      joinBtn.disabled = true;
+      leaveBtn.disabled = false;
+      renderRoomMembers(room.members || []);
+      if (playersCard) playersCard.style.display = "block";
+    } else {
+      statusEl.textContent = "Офлайн режим: игра только на этом устройстве.";
+      createBtn.disabled = false;
+      joinBtn.disabled = false;
+      leaveBtn.disabled = true;
+      renderRoomMembers([]);
+      if (playersCard) playersCard.style.display = "none";
+    }
+
+    updateStartButton();
+  }
+
+  function getDefaultRoomUsername() {
+    if (window.BunkerAuth && typeof window.BunkerAuth.getCurrentUser === "function") {
+      const user = window.BunkerAuth.getCurrentUser();
+      if (user && user.username) return user.username;
+    }
+    return "";
+  }
+
+  async function createRoomFromUi() {
+    const usernameInput = document.getElementById("room-username-input");
+    if (!usernameInput || !window.BunkerRooms) return;
+
+    const username = (usernameInput.value || "").trim() || getDefaultRoomUsername();
+    if (!username) {
+      showNotification("Введите имя для онлайн-комнаты", "warning");
+      return;
+    }
+
+    try {
+      await window.BunkerRooms.createRoom(username);
+      showNotification("Комната создана", "success");
+      renderRoomState();
+    } catch (err) {
+      showNotification(err.message || "Не удалось создать комнату", "error");
+    }
+  }
+
+  async function joinRoomFromUi() {
+    const codeInput = document.getElementById("room-code-input");
+    const usernameInput = document.getElementById("room-username-input");
+    if (!codeInput || !usernameInput || !window.BunkerRooms) return;
+
+    const roomCode = (codeInput.value || "").trim().toUpperCase();
+    const username = (usernameInput.value || "").trim() || getDefaultRoomUsername();
+    if (!username) {
+      showNotification("Введите имя для онлайн-комнаты", "warning");
+      return;
+    }
+
+    try {
+      await window.BunkerRooms.joinRoom(roomCode, username);
+      showNotification("Подключение к комнате выполнено", "success");
+      renderRoomState();
+    } catch (err) {
+      showNotification(err.message || "Не удалось войти в комнату", "error");
+    }
+  }
+
+  async function leaveRoomFromUi() {
+    if (!window.BunkerRooms) return;
+    try {
+      await window.BunkerRooms.leaveRoom();
+      showNotification("Вы вышли из комнаты", "info");
+      renderRoomState();
+    } catch (err) {
+      showNotification(err.message || "Не удалось выйти из комнаты", "error");
+    }
+  }
+
+  function bindRoomEvents() {
+    if (roomUiReady || !window.BunkerRooms) return;
+    roomUiReady = true;
+
+    window.BunkerRooms.init({
+      onRoomUpdate: (payload) => {
+        if (state.phase === "setup") {
+          roomSyncApplying = true;
+          setPlayerNames(payload.players || []);
+          roomSyncApplying = false;
+        }
+        if (payload.game) {
+          applyRemoteGameState(payload.game);
+          refreshPrivateModalIfOpen();
+        } else if (isConnectedRoom() && state.phase !== "setup") {
+          applyRemoteLobbyState(payload.players || []);
+        }
+        renderRoomState();
+      },
+      onError: (message) => {
+        showNotification(message || "Ошибка комнаты", "warning");
+      },
+      onDisconnected: () => {
+        if (state.phase === "setup") {
+          setPlayerNames([]);
+        }
+        renderRoomState();
+      },
+    });
+
+    const roomUsernameInput = document.getElementById("room-username-input");
+    if (roomUsernameInput && !roomUsernameInput.value) {
+      roomUsernameInput.value = getDefaultRoomUsername();
+    }
+
+    document.getElementById("btn-room-create")?.addEventListener("click", createRoomFromUi);
+    document.getElementById("btn-room-join")?.addEventListener("click", joinRoomFromUi);
+    document.getElementById("btn-room-leave")?.addEventListener("click", leaveRoomFromUi);
+
+    document.getElementById("room-code-input")?.addEventListener("input", (e) => {
+      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    });
+
+    document.getElementById("room-code-input")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") joinRoomFromUi();
+    });
+  }
+
+  function applyRemoteGameState(game) {
+    if (!game || typeof game !== "object") return;
+
+    const prevPhase = state.phase;
+    const prevRound = state.round;
+    const prevSelectedIndex = state.currentPlayerIndex;
+    const room = getRoomState();
+    const isOnline = Boolean(room.connected);
+
+    const players = Array.isArray(game.players) ? game.players : [];
+    const catastrophe = game.catastrophe || null;
+    const bunkerCapacity = Number(game.bunkerCapacity || 0);
+    const round = Number(game.round || 1);
+    const remotePhase = String(game.phase || "setup");
+
+    if (players.length < 2 || !catastrophe || !bunkerCapacity) {
+      return;
+    }
+
+    state.players = players;
+    state.catastrophe = catastrophe;
+    state.bunkerCapacity = bunkerCapacity;
+    state.survivorCount = bunkerCapacity;
+    state.round = round;
+    state.eliminatedPlayers = [];
+    state.votingResults = {};
+    state.roundPlayedPlayers = {};
+    state.turnRevealed = false;
+    state.tieCandidates = [];
+    state.phase = remotePhase;
+    if (!isOnline) {
+      state.currentPlayerIndex = Number(game.currentPlayerIndex || 0);
+    }
+    state.roundPlayedPlayers = game.roundPlayedPlayers || {};
+    state.turnRevealed = Boolean(game.turnRevealed);
+    state.tieCandidates = Array.isArray(game.tieCandidates) ? game.tieCandidates : [];
+    state.votingResults = game.voteCounts || {};
+    state._voterChoices = game.voterChoices || {};
+    state._revealsThisRound = game.revealsThisRound || {};
+    state.eliminatedPlayers = Array.isArray(game.eliminatedPlayers)
+      ? game.eliminatedPlayers
+      : state.players.filter((p) => p.isEliminated);
+
+    if (remotePhase === "catastrophe") {
+      if (prevPhase !== "catastrophe") {
+        showNotification("Хост начал игру. Переход к катастрофе...", "info");
+      }
+      showCatastropheScreen();
+      return;
+    }
+
+    if (remotePhase === "game") {
+      if (isOnline) {
+        const enteredNewRound = prevPhase !== "game" || round !== prevRound;
+        const selfIdx = state.players.findIndex((p) => p.playerName === room.username && !p.isEliminated);
+
+        if (enteredNewRound) {
+          state.currentPlayerIndex = selfIdx;
+        } else {
+          const stillValid = Number.isInteger(prevSelectedIndex)
+            && prevSelectedIndex >= 0
+            && prevSelectedIndex < state.players.length
+            && !state.players[prevSelectedIndex]?.isEliminated;
+
+          if (stillValid) {
+            state.currentPlayerIndex = prevSelectedIndex;
+          } else {
+            state.currentPlayerIndex = selfIdx;
+          }
+        }
+      }
+
+      showScreen("screen-game");
+      renderGameOverview();
+
+      const selectedIdx = state.currentPlayerIndex;
+      const selectedValid = Number.isInteger(selectedIdx)
+        && selectedIdx >= 0
+        && selectedIdx < state.players.length
+        && !state.players[selectedIdx]?.isEliminated;
+
+      if (selectedValid) {
+        renderPlayerCard(state.players[selectedIdx], selectedIdx);
+      } else {
+        const cardDiv = document.getElementById("current-player-card");
+        if (cardDiv) {
+          cardDiv.innerHTML = `
+            <p style="color:var(--text-muted); text-align:center; padding:2rem;">
+              Выберите игрока слева
+            </p>
+          `;
+        }
+      }
+      return;
+    }
+
+    if (remotePhase === "voting") {
+      showScreen("screen-voting");
+      renderVoting();
+      return;
+    }
+
+    if (remotePhase === "results") {
+      showScreen("screen-results");
+      renderResults(state.players.filter((p) => !p.isEliminated));
+    }
+  }
+
+  function applyRemoteLobbyState(roomPlayers) {
+    state = {
+      phase: "setup",
+      players: [],
+      catastrophe: null,
+      bunkerCapacity: 0,
+      currentPlayerIndex: 0,
+      round: 1,
+      votingResults: {},
+      survivorCount: 0,
+      eliminatedPlayers: [],
+      activeActionCard: null,
+      roundPlayedPlayers: {},
+      turnRevealed: false,
+      tieCandidates: [],
+      _voterChoices: {},
+      _revealsThisRound: {},
+      _playerNames: Array.isArray(roomPlayers) ? roomPlayers.slice() : [],
+    };
+    initSetup();
+    showNotification("Хост начал новую игру", "info");
   }
 
   function startGame() {
+    if (window.BunkerAuth && typeof window.BunkerAuth.isAuthenticated === "function") {
+      if (!window.BunkerAuth.isAuthenticated()) {
+        window.BunkerAuth.requireAuth();
+        return;
+      }
+    }
+
     const names = getPlayerNames();
     if (names.length < 2) { showNotification("Нужно минимум 2 игрока!", "warning"); return; }
 
-    // Вместимость бункера = ceil(половина игроков)
-    const capacity = Math.ceil(names.length / 2);
+    // Вместимость бункера: ceil(половина игроков), но при 3 игроках только 1 место.
+    const capacity = names.length === 3 ? 1 : Math.ceil(names.length / 2);
     state.bunkerCapacity = capacity;
     state.survivorCount = capacity;
     state.round = 1;
@@ -120,6 +465,20 @@ const BunkerGame = (() => {
     // Generate cards
     state.players = names.map((name) => generatePlayerCard(name));
     state.catastrophe = generateCatastrophe();
+
+    const room = getRoomState();
+    if (room.connected && room.isHost && window.BunkerRooms?.startGameSession) {
+      window.BunkerRooms.startGameSession({
+        phase: "catastrophe",
+        startedAt: Date.now(),
+        bunkerCapacity: state.bunkerCapacity,
+        round: state.round,
+        catastrophe: state.catastrophe,
+        players: state.players,
+      }).catch((err) => {
+        showNotification(err.message || "Не удалось синхронизировать старт игры", "warning");
+      });
+    }
 
     showCatastropheScreen();
   }
@@ -139,10 +498,23 @@ const BunkerGame = (() => {
     document.getElementById("bunker-capacity-display").textContent = state.bunkerCapacity;
     document.getElementById("total-players-display").textContent = state.players.length;
     document.getElementById("eliminated-need-display").textContent = state.players.length - state.bunkerCapacity;
+
+    const proceedBtn = document.getElementById("btn-proceed-game");
+    if (proceedBtn) {
+      const room = getRoomState();
+      proceedBtn.disabled = Boolean(room.connected && !room.isHost);
+    }
   }
 
   // ---- Game Phase (Card Reveal) ----
   function startGamePhase() {
+    if (isConnectedRoom()) {
+      window.BunkerRooms?.gameAction("proceedGame", {}).catch((err) => {
+        showNotification(err.message || "Не удалось перейти к фазе игры", "warning");
+      });
+      return;
+    }
+
     state.phase = "game";
     beginRound();
   }
@@ -201,7 +573,7 @@ const BunkerGame = (() => {
       div.addEventListener("click", () => {
         if (player.isEliminated) return;
         if (state.phase !== "game") return;
-        if (i !== state.currentPlayerIndex) {
+        if (!isConnectedRoom() && i !== state.currentPlayerIndex) {
           showNotification("Сейчас ход другого игрока", "warning");
           return;
         }
@@ -283,7 +655,11 @@ const BunkerGame = (() => {
 
   function renderPlayerCard(player, playerIndex) {
     const cardDiv = document.getElementById("current-player-card");
-    const isCurrentTurn = playerIndex === state.currentPlayerIndex;
+    const room = getRoomState();
+    const isOnline = Boolean(room.connected);
+    const isSelfPlayer = isOnline ? player.playerName === room.username : playerIndex === state.currentPlayerIndex;
+    const isCurrentTurn = !isOnline ? playerIndex === state.currentPlayerIndex : isSelfPlayer;
+    const alreadyPlayedThisRound = isOnline && Boolean(state.roundPlayedPlayers && state.roundPlayedPlayers[String(playerIndex)]);
 
     const attrs = getPlayerAttributes(player);
 
@@ -305,13 +681,13 @@ const BunkerGame = (() => {
         ${attrs.map((attr) => renderAttribute(attr, player.revealed[attr.key])).join("")}
       </div>
       <div class="card-actions">
-        ${isCurrentTurn ? `<button class="btn btn-secondary" id="btn-private-view">🙈 Мои карты (приватно)</button>` : ""}
-        ${isCurrentTurn ? `<button class="btn btn-primary" id="btn-next-player-card" ${state.turnRevealed ? "" : "disabled"}>➡️ Следующий игрок</button>` : ""}
+        ${isSelfPlayer ? `<button class="btn btn-secondary" id="btn-private-view">🙈 Мои карты (приватно)</button>` : ""}
+        ${isSelfPlayer && state.phase === "game" && !alreadyPlayedThisRound ? `<button class="btn btn-primary" id="btn-next-player-card" ${isOnline ? "" : (state.turnRevealed ? "" : "disabled")}>✅ Завершить ход</button>` : ""}
       </div>
     `;
 
     // Attach action button handlers without inline onclick
-    if (isCurrentTurn) {
+    if (isSelfPlayer) {
       cardDiv.querySelector("#btn-private-view")?.addEventListener("click", () => openPrivateView(playerIndex));
       cardDiv.querySelector("#btn-next-player-card")?.addEventListener("click", nextPlayer);
     }
@@ -319,12 +695,23 @@ const BunkerGame = (() => {
 
   function openPrivateView(playerIndex) {
     if (state.phase !== "game") return;
-    if (playerIndex !== state.currentPlayerIndex) {
+    if (!isConnectedRoom() && playerIndex !== state.currentPlayerIndex) {
       showNotification("Сейчас ход другого игрока", "warning");
       return;
     }
 
     const player = state.players[playerIndex];
+    if (isConnectedRoom()) {
+      const room = getRoomState();
+      if (player.playerName !== room.username) {
+        showNotification("Можно смотреть только свою приватную карточку", "warning");
+        return;
+      }
+      if (state.roundPlayedPlayers && state.roundPlayedPlayers[String(playerIndex)]) {
+        showNotification("Ваш ход в этом раунде уже завершен", "info");
+      }
+    }
+
     const attrs = getPlayerAttributes(player);
     const modal = document.getElementById("private-player-modal");
     const nameEl = document.getElementById("private-player-name");
@@ -333,14 +720,23 @@ const BunkerGame = (() => {
 
     if (!modal || !nameEl || !noteEl || !attrsEl) return;
 
+    privateModalPlayerIndex = playerIndex;
+
     nameEl.textContent = player.playerName;
     noteEl.textContent = state.round === 1
       ? "В 1-м раунде для раскрытия доступна только Профессия."
       : "Выберите 1 атрибут, который раскроете всем игрокам в этом раунде.";
 
+    const revealedThisRound = isConnectedRoom()
+      ? Boolean(state._revealsThisRound && state._revealsThisRound[String(playerIndex)])
+      : state.turnRevealed;
+
     attrsEl.innerHTML = attrs.map((attr) => {
       const isRevealed = player.revealed[attr.key];
-      const canReveal = !isRevealed && !state.turnRevealed && canRevealKey(attr.key);
+      const canReveal = !isRevealed
+        && !revealedThisRound
+        && canRevealKey(attr.key)
+        && (isConnectedRoom() ? true : playerIndex === state.currentPlayerIndex);
       const blockedByRound = !isRevealed && !canRevealKey(attr.key);
 
       return `
@@ -355,7 +751,7 @@ const BunkerGame = (() => {
             <button class="btn btn-primary btn-reveal-choice" data-key="${attr.key}" ${canReveal ? "" : "disabled"}>
               Раскрыть всем
             </button>
-            <span class="private-state">${isRevealed ? "Уже раскрыто" : blockedByRound ? "Недоступно в этом раунде" : state.turnRevealed ? "Лимит раскрытия исчерпан" : "Скрыто"}</span>
+            <span class="private-state">${isRevealed ? "Уже раскрыто" : blockedByRound ? "Недоступно в этом раунде" : revealedThisRound ? "Лимит раскрытия исчерпан" : "Скрыто"}</span>
           </div>
         </div>
       `;
@@ -371,7 +767,19 @@ const BunkerGame = (() => {
   }
 
   function closePrivateView() {
+    privateModalPlayerIndex = null;
     document.getElementById("private-player-modal")?.classList.remove("open");
+  }
+
+  function refreshPrivateModalIfOpen() {
+    const modal = document.getElementById("private-player-modal");
+    if (!modal || !modal.classList.contains("open")) return;
+    if (privateModalPlayerIndex === null) return;
+    if (!state.players[privateModalPlayerIndex] || state.players[privateModalPlayerIndex].isEliminated) {
+      closePrivateView();
+      return;
+    }
+    openPrivateView(privateModalPlayerIndex);
   }
 
   function openVotingPlayerCard(playerIndex) {
@@ -396,17 +804,27 @@ const BunkerGame = (() => {
     document.getElementById("voting-card-modal")?.classList.remove("open");
   }
 
-  function revealFromPrivate(playerIndex, key) {
+  async function revealFromPrivate(playerIndex, key) {
     const player = state.players[playerIndex];
     if (!player || player.isEliminated) return;
-    if (playerIndex !== state.currentPlayerIndex) return;
-    if (state.turnRevealed) return;
+    if (!isConnectedRoom() && playerIndex !== state.currentPlayerIndex) return;
+    if (!isConnectedRoom() && state.turnRevealed) return;
     if (!canRevealKey(key)) {
       showNotification("Этот атрибут нельзя раскрыть в текущем раунде", "warning");
       return;
     }
     if (player.revealed[key]) {
       showNotification("Атрибут уже раскрыт", "info");
+      return;
+    }
+
+    if (isConnectedRoom()) {
+      try {
+        await window.BunkerRooms.gameAction("revealAttribute", { key });
+        refreshPrivateModalIfOpen();
+      } catch (err) {
+        showNotification(err.message || "Не удалось раскрыть атрибут", "warning");
+      }
       return;
     }
 
@@ -438,7 +856,16 @@ const BunkerGame = (() => {
     }
   }
 
-  function nextPlayer() {
+  async function nextPlayer() {
+    if (isConnectedRoom()) {
+      try {
+        await window.BunkerRooms.gameAction("nextPlayer", {});
+      } catch (err) {
+        showNotification(err.message || "Не удалось завершить ход", "warning");
+      }
+      return;
+    }
+
     if (!state.turnRevealed) {
       showNotification("Сначала раскройте 1 атрибут этого игрока", "warning");
       return;
@@ -485,6 +912,10 @@ const BunkerGame = (() => {
     document.getElementById("voting-round").textContent = state.round;
     document.getElementById("voting-eliminate").textContent = 1;
 
+    const room = getRoomState();
+    const isOnline = Boolean(room.connected);
+    const hasVotedOnline = isOnline && Boolean(state._voterChoices && state._voterChoices[room.clientId]);
+
     votingPool.forEach((player, i) => {
       const idx = state.players.indexOf(player);
       const voteCount = state.votingResults[player.playerName] || 0;
@@ -499,7 +930,7 @@ const BunkerGame = (() => {
         <button class="btn btn-secondary btn-vote-view-card">
           Посмотреть карточку
         </button>
-        <button class="btn btn-vote">
+        <button class="btn btn-vote" ${hasVotedOnline ? "disabled" : ""}>
           🗳️ Голосовать за выбывание
         </button>
       `;
@@ -509,10 +940,29 @@ const BunkerGame = (() => {
     });
 
     // Update vote submit button
-    document.getElementById("btn-confirm-votes").disabled = Object.keys(state.votingResults).length === 0;
+    const confirmBtn = document.getElementById("btn-confirm-votes");
+    if (confirmBtn) {
+      if (isOnline) {
+        confirmBtn.disabled = true;
+        confirmBtn.style.display = "none";
+      } else {
+        confirmBtn.style.display = "inline-flex";
+        confirmBtn.disabled = Object.keys(state.votingResults).length === 0;
+      }
+    }
   }
 
-  function castVote(playerName, playerIndex) {
+  async function castVote(playerName, playerIndex) {
+    if (isConnectedRoom()) {
+      try {
+        await window.BunkerRooms.gameAction("castVote", { targetName: playerName });
+        showNotification(`Ваш голос за ${playerName} принят`, "info");
+      } catch (err) {
+        showNotification(err.message || "Не удалось проголосовать", "warning");
+      }
+      return;
+    }
+
     // Simple voting: click = add vote
     if (!state.votingResults[playerName]) state.votingResults[playerName] = 0;
     state.votingResults[playerName]++;
@@ -525,6 +975,11 @@ const BunkerGame = (() => {
   }
 
   function confirmVotes() {
+    if (isConnectedRoom()) {
+      showNotification("В онлайн-режиме итоги считаются автоматически", "info");
+      return;
+    }
+
     const alive = state.players.filter((p) => !p.isEliminated);
     const pool = state.tieCandidates.length > 0
       ? alive.filter((p) => state.tieCandidates.includes(p.playerName))
@@ -635,7 +1090,22 @@ const BunkerGame = (() => {
     });
   }
 
-  function restartGame() {
+  async function restartGame() {
+    const room = getRoomState();
+
+    if (room.connected) {
+      if (!room.isHost) {
+        showNotification("Только хост может начать новую игру", "warning");
+        return;
+      }
+      try {
+        await window.BunkerRooms.gameAction("resetGame", {});
+      } catch (err) {
+        showNotification(err.message || "Не удалось начать новую игру", "error");
+      }
+      return;
+    }
+
     state = {
       phase: "setup",
       players: [],
@@ -650,6 +1120,41 @@ const BunkerGame = (() => {
       roundPlayedPlayers: {},
       turnRevealed: false,
       tieCandidates: [],
+      _voterChoices: {},
+      _revealsThisRound: {},
+      _playerNames: room.connected ? (room.players || []).slice() : [],
+    };
+    initSetup();
+  }
+
+  async function backToMainMenu() {
+    const room = getRoomState();
+
+    if (room.connected && window.BunkerRooms) {
+      try {
+        await window.BunkerRooms.leaveRoom();
+      } catch (err) {
+        showNotification(err.message || "Не удалось выйти в главное меню", "error");
+      }
+      return;
+    }
+
+    state = {
+      phase: "setup",
+      players: [],
+      catastrophe: null,
+      bunkerCapacity: 0,
+      currentPlayerIndex: 0,
+      round: 1,
+      votingResults: {},
+      survivorCount: 0,
+      eliminatedPlayers: [],
+      activeActionCard: null,
+      roundPlayedPlayers: {},
+      turnRevealed: false,
+      tieCandidates: [],
+      _voterChoices: {},
+      _revealsThisRound: {},
       _playerNames: [],
     };
     initSetup();
@@ -674,6 +1179,8 @@ const BunkerGame = (() => {
     init() {
       state._playerNames = [];
       initSetup();
+      bindRoomEvents();
+      renderRoomState();
       // Attach global button handlers
       document.getElementById("btn-add-player")?.addEventListener("click", addPlayer);
       document.getElementById("player-name-input")?.addEventListener("keydown", (e) => {
@@ -683,6 +1190,7 @@ const BunkerGame = (() => {
       document.getElementById("btn-proceed-game")?.addEventListener("click", startGamePhase);
       document.getElementById("btn-confirm-votes")?.addEventListener("click", confirmVotes);
       document.getElementById("btn-restart")?.addEventListener("click", restartGame);
+      document.getElementById("btn-back-menu")?.addEventListener("click", backToMainMenu);
 
       document.getElementById("btn-close-private")?.addEventListener("click", closePrivateView);
       document.getElementById("btn-private-done")?.addEventListener("click", closePrivateView);
@@ -696,7 +1204,19 @@ const BunkerGame = (() => {
         if (e.target === e.currentTarget) closeVotingPlayerCard();
       });
     },
+    resetToSetup() {
+      restartGame();
+    },
   };
 })();
 
-document.addEventListener("DOMContentLoaded", () => BunkerGame.init());
+window.BunkerGame = BunkerGame;
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.BunkerAuth && typeof window.BunkerAuth.init === "function") {
+    window.BunkerAuth.init(null, { openOnUnauth: false });
+    window.BunkerGame.init();
+  } else {
+    window.BunkerGame.init();
+  }
+});

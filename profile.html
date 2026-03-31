@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Бункер - Профиль</title>
+  <meta name="description" content="Профиль пользователя игры Бункер" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="notification" id="notification"></div>
+
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <h2>Авторизация</h2>
+    <p class="auth-subtitle">Для доступа к профилю выполните вход или регистрацию</p>
+
+    <div class="auth-grid">
+      <form id="login-form" class="auth-form" autocomplete="on">
+        <h3>Вход</h3>
+        <label for="login-username">Логин</label>
+        <input type="text" id="login-username" maxlength="30" required />
+        <label for="login-password">Пароль</label>
+        <input type="password" id="login-password" maxlength="50" required />
+        <button type="submit" class="btn btn-primary">Войти</button>
+      </form>
+
+      <form id="register-form" class="auth-form" autocomplete="on">
+        <h3>Регистрация</h3>
+        <label for="register-username">Логин</label>
+        <input type="text" id="register-username" maxlength="30" required />
+        <label for="register-password">Пароль</label>
+        <input type="password" id="register-password" maxlength="50" required />
+        <label for="register-role">Роль</label>
+        <select id="register-role" required>
+          <option value="player">Игрок</option>
+          <option value="host">Ведущий</option>
+          <option value="admin">Администратор</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<header class="game-header">
+  <div class="auth-userbar">
+    <span id="auth-status">Не авторизован</span>
+    <a class="btn btn-secondary" href="index.html">К игре</a>
+    <button class="btn btn-secondary" id="btn-logout" style="display:none;">Выйти</button>
+  </div>
+  <div class="game-logo">👤</div>
+  <h1 class="game-title">Профиль пользователя</h1>
+  <p class="game-subtitle">Управление вашей учетной записью</p>
+</header>
+
+<main class="container">
+  <div class="profile-grid" id="profile-content" style="display:none;">
+    <section class="card profile-card">
+      <div class="section-title">Данные профиля</div>
+      <div class="profile-row"><span>Логин:</span><strong id="profile-username">-</strong></div>
+      <div class="profile-row"><span>Роль:</span><strong id="profile-role">-</strong></div>
+      <div class="profile-row"><span>Дата регистрации:</span><strong id="profile-created">-</strong></div>
+    </section>
+
+    <section class="card profile-card">
+      <div class="section-title">Права роли</div>
+      <ul id="profile-permissions" class="profile-list"></ul>
+    </section>
+  </div>
+
+  <section class="card" id="admin-panel" style="display:none;">
+    <div class="section-title">Панель администратора</div>
+    <p class="admin-subtitle">Управление пользователями и ролями</p>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Логин</th>
+            <th>Роль</th>
+            <th>Дата регистрации</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="admin-users-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="card" id="profile-guest" style="display:none; text-align:center;">
+    <div class="section-title" style="justify-content:center;">Гость</div>
+    <p style="color:var(--text-secondary); margin-bottom:1rem;">Войдите в аккаунт, чтобы посмотреть профиль.</p>
+    <button class="btn btn-primary" id="btn-open-auth">Войти или зарегистрироваться</button>
+  </div>
+</main>
+
+<script src="js/auth.js"></script>
+<script src="js/profile.js"></script>
+</body>
+</html>
