@@ -52,21 +52,35 @@ const BunkerAuth = (() => {
   function updateHeaderAuthState() {
     const user = getCurrentUser();
     const status = $("auth-status");
+    const loginBtn = $("btn-login");
     const logoutBtn = $("btn-logout");
     if (!status || !logoutBtn) return;
 
     if (user) {
       const roleText = ROLE_LABELS[user.role] || user.role || "Пользователь";
       status.textContent = `Пользователь: ${user.username} (${roleText})`;
+      if (loginBtn) loginBtn.style.display = "none";
       logoutBtn.style.display = "inline-flex";
     } else {
-      status.textContent = "Не авторизован";
+      status.textContent = "Гость";
+      if (loginBtn) loginBtn.style.display = "inline-flex";
       logoutBtn.style.display = "none";
     }
   }
 
-  function openAuthOverlay() {
+  function setAuthView(view = "login") {
+    const loginPanel = $("auth-panel-login");
+    const registerPanel = $("auth-panel-register");
+    if (!loginPanel || !registerPanel) return;
+
+    const showRegister = view === "register";
+    loginPanel.style.display = showRegister ? "none" : "block";
+    registerPanel.style.display = showRegister ? "block" : "none";
+  }
+
+  function openAuthOverlay(view = "login") {
     const overlay = $("auth-overlay");
+    setAuthView(view);
     if (overlay) overlay.classList.add("open");
   }
 
@@ -151,6 +165,7 @@ const BunkerAuth = (() => {
       register(username, password, role);
       const loginField = $("login-username");
       if (loginField) loginField.value = username;
+      setAuthView("login");
     });
 
     $("login-form")?.addEventListener("submit", (e) => {
@@ -164,6 +179,10 @@ const BunkerAuth = (() => {
     });
 
     $("btn-logout")?.addEventListener("click", logout);
+    $("btn-login")?.addEventListener("click", () => openAuthOverlay("login"));
+    $("btn-show-register")?.addEventListener("click", () => setAuthView("register"));
+    $("btn-show-login")?.addEventListener("click", () => setAuthView("login"));
+    $("btn-auth-close")?.addEventListener("click", closeAuthOverlay);
   }
 
   function getCurrentUser() {

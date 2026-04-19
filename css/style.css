@@ -45,7 +45,7 @@ body {
 .notification {
   position: fixed;
   top: 1.5rem;
-  right: 1.5rem;
+  left: 1.5rem;
   padding: 0.85rem 1.5rem;
   border-radius: var(--radius-sm);
   font-weight: 600;
@@ -108,15 +108,21 @@ body {
 .auth-overlay.open {
   display: flex;
 }
+.auth-layout,
 .auth-card {
-  width: min(840px, 100%);
+  width: min(520px, 100%);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 1.1rem;
   box-shadow: var(--shadow);
+  position: relative;
 }
-.auth-card h2 {
+.auth-intro {
+  margin-bottom: 0.75rem;
+  padding-right: 2rem;
+}
+.auth-intro h2 {
   font-size: 1.4rem;
   margin-bottom: 0.3rem;
 }
@@ -126,20 +132,45 @@ body {
 }
 .auth-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.9rem;
 }
-.auth-form {
+.auth-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-dark);
   padding: 1rem;
+  width: 100%;
+}
+.auth-switch-btn {
+  margin-top: 0.25rem;
+}
+.auth-close-btn {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.auth-close-btn:hover {
+  background: #f1f5f9;
+  color: var(--text-primary);
+}
+.auth-panel h3,
+.auth-form h3 {
+  margin-bottom: 0.45rem;
+}
+.auth-form {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-}
-.auth-form h3 {
-  margin-bottom: 0.3rem;
 }
 .auth-form label {
   font-size: 0.8rem;

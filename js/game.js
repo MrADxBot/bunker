@@ -21,6 +21,7 @@ const BunkerGame = (() => {
   let roomUiReady = false;
   let roomSyncApplying = false;
   let privateModalPlayerIndex = null;
+  let offlineDebugUnlocked = false;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
@@ -58,7 +59,7 @@ const BunkerGame = (() => {
       div.innerHTML = `
         <span class="player-num">${i + 1}</span>
         <span class="player-name-display">${escapeHtml(name)}</span>
-        <button class="btn-icon btn-remove" data-index="${i}" title="Удалить" ${canEdit ? "" : "disabled"}>✕</button>
+        <button class="btn-icon btn-remove" data-index="${i}" title="Удалить" ${canEdit ? "" : "disabled"}>×</button>
       `;
       container.appendChild(div);
     });
@@ -128,25 +129,37 @@ const BunkerGame = (() => {
 
   function updateStartButton() {
     const btn = document.getElementById("btn-start-game");
+    const debugBtn = document.getElementById("btn-start-offline-debug");
     const addBtn = document.getElementById("btn-add-player");
     if (!btn) return;
 
     const names = getPlayerNames();
     const room = getRoomState();
-    btn.disabled = !room.connected || names.length < 2 || !room.isHost;
+    const isOnline = Boolean(room.connected);
+    const canStartOnline = isOnline && room.isHost && names.length >= 2;
+    const canStartOfflineDebug = offlineDebugUnlocked && !isOnline && names.length >= 2;
+    btn.disabled = !canStartOnline;
+
+    if (debugBtn) {
+      debugBtn.style.display = offlineDebugUnlocked ? "inline-flex" : "none";
+      debugBtn.disabled = !canStartOfflineDebug;
+    }
+
     if (addBtn) {
-      addBtn.disabled = true;
-      addBtn.style.display = "none";
+      const offlineEditable = !isOnline && offlineDebugUnlocked;
+      addBtn.disabled = !offlineEditable;
+      addBtn.style.display = offlineEditable ? "inline-flex" : "none";
     }
 
     const nameInput = document.getElementById("player-name-input");
     if (nameInput) {
-      nameInput.disabled = true;
-      nameInput.style.display = "none";
+      const offlineEditable = !isOnline && offlineDebugUnlocked;
+      nameInput.disabled = !offlineEditable;
+      nameInput.style.display = offlineEditable ? "block" : "none";
     }
 
     const addRow = document.getElementById("player-add-row");
-    if (addRow) addRow.style.display = "none";
+    if (addRow) addRow.style.display = !isOnline && offlineDebugUnlocked ? "flex" : "none";
   }
 
   function renderRoomMembers(members) {
@@ -190,12 +203,13 @@ const BunkerGame = (() => {
       renderRoomMembers(room.members || []);
       if (playersCard) playersCard.style.display = "block";
     } else {
-      statusEl.textContent = "Офлайн режим: игра только на этом устройстве.";
       createBtn.disabled = false;
       joinBtn.disabled = false;
       leaveBtn.disabled = true;
       renderRoomMembers([]);
-      if (playersCard) playersCard.style.display = "none";
+      codeInput.value = "";
+      statusEl.textContent = "";
+      if (playersCard) playersCard.style.display = offlineDebugUnlocked ? "block" : "none";
     }
 
     updateStartButton();
@@ -440,6 +454,8 @@ const BunkerGame = (() => {
   }
 
   function startGame() {
+    const forceOfflineDebug = arguments[0] && arguments[0].forceOfflineDebug === true;
+
     if (window.BunkerAuth && typeof window.BunkerAuth.isAuthenticated === "function") {
       if (!window.BunkerAuth.isAuthenticated()) {
         window.BunkerAuth.requireAuth();
@@ -449,6 +465,17 @@ const BunkerGame = (() => {
 
     const names = getPlayerNames();
     if (names.length < 2) { showNotification("Нужно минимум 2 игрока!", "warning"); return; }
+
+    const room = getRoomState();
+    if (!room.connected && !forceOfflineDebug) {
+      showNotification("Для обычной игры подключитесь к онлайн-комнате", "warning");
+      return;
+    }
+
+    if (forceOfflineDebug && room.connected) {
+      showNotification("Оффлайн-дебаг доступен только вне комнаты", "warning");
+      return;
+    }
 
     // Вместимость бункера: ceil(половина игроков), но при 3 игроках только 1 место.
     const capacity = names.length === 3 ? 1 : Math.ceil(names.length / 2);
@@ -466,7 +493,6 @@ const BunkerGame = (() => {
     state.players = names.map((name) => generatePlayerCard(name));
     state.catastrophe = generateCatastrophe();
 
-    const room = getRoomState();
     if (room.connected && room.isHost && window.BunkerRooms?.startGameSession) {
       window.BunkerRooms.startGameSession({
         phase: "catastrophe",
@@ -481,6 +507,21 @@ const BunkerGame = (() => {
     }
 
     showCatastropheScreen();
+  }
+
+  function startOfflineDebugGame() {
+    startGame({ forceOfflineDebug: true });
+  }
+
+  function toggleOfflineDebugMode() {
+    offlineDebugUnlocked = !offlineDebugUnlocked;
+    renderRoomState();
+  }
+
+  function bindBetaDebugToggle() {
+    const betaBadge = document.querySelector(".version-badge");
+    if (!betaBadge) return;
+    betaBadge.addEventListener("click", toggleOfflineDebugMode);
   }
 
   // ---- Catastrophe Screen ----
@@ -681,8 +722,8 @@ const BunkerGame = (() => {
         ${attrs.map((attr) => renderAttribute(attr, player.revealed[attr.key])).join("")}
       </div>
       <div class="card-actions">
-        ${isSelfPlayer ? `<button class="btn btn-secondary" id="btn-private-view">🙈 Мои карты (приватно)</button>` : ""}
-        ${isSelfPlayer && state.phase === "game" && !alreadyPlayedThisRound ? `<button class="btn btn-primary" id="btn-next-player-card" ${isOnline ? "" : (state.turnRevealed ? "" : "disabled")}>✅ Завершить ход</button>` : ""}
+        ${isSelfPlayer ? `<button class="btn btn-secondary" id="btn-private-view">Мои карты (приватно)</button>` : ""}
+        ${isSelfPlayer && state.phase === "game" && !alreadyPlayedThisRound ? `<button class="btn btn-primary" id="btn-next-player-card" ${isOnline ? "" : (state.turnRevealed ? "" : "disabled")}>Завершить ход</button>` : ""}
       </div>
     `;
 
@@ -931,7 +972,7 @@ const BunkerGame = (() => {
           Посмотреть карточку
         </button>
         <button class="btn btn-vote" ${hasVotedOnline ? "disabled" : ""}>
-          🗳️ Голосовать за выбывание
+          Голосовать за выбывание
         </button>
       `;
       div.querySelector(".btn-vote-view-card")?.addEventListener("click", () => openVotingPlayerCard(idx));
@@ -1062,12 +1103,12 @@ const BunkerGame = (() => {
           <div class="result-name">${escapeHtml(player.playerName)}</div>
           <div class="result-profession">${escapeHtml(player.profession.name)}</div>
           <div class="result-attrs">
-            <span>❤️ ${escapeHtml(player.health.name)}</span>
-            <span>🎯 ${escapeHtml(player.hobby.name)}</span>
-            <span>🎒 ${escapeHtml(player.luggage.name)}</span>
+            <span>Здоровье: ${escapeHtml(player.health.name)}</span>
+            <span>Хобби: ${escapeHtml(player.hobby.name)}</span>
+            <span>Багаж: ${escapeHtml(player.luggage.name)}</span>
           </div>
         </div>
-        <div class="result-badge">🏆 В бункере!</div>
+        <div class="result-badge">В бункере</div>
       `;
       survivorContainer.appendChild(div);
     });
@@ -1084,7 +1125,7 @@ const BunkerGame = (() => {
           <div class="result-name">${escapeHtml(player.playerName)}</div>
           <div class="result-profession">${escapeHtml(player.profession.name)}</div>
         </div>
-        <div class="result-badge-out">☠️ Не попал</div>
+        <div class="result-badge-out">Не попал</div>
       `;
       eliminatedContainer.appendChild(div);
     });
@@ -1187,6 +1228,7 @@ const BunkerGame = (() => {
         if (e.key === "Enter") addPlayer();
       });
       document.getElementById("btn-start-game")?.addEventListener("click", startGame);
+      document.getElementById("btn-start-offline-debug")?.addEventListener("click", startOfflineDebugGame);
       document.getElementById("btn-proceed-game")?.addEventListener("click", startGamePhase);
       document.getElementById("btn-confirm-votes")?.addEventListener("click", confirmVotes);
       document.getElementById("btn-restart")?.addEventListener("click", restartGame);
@@ -1203,6 +1245,8 @@ const BunkerGame = (() => {
       document.getElementById("voting-card-modal")?.addEventListener("click", (e) => {
         if (e.target === e.currentTarget) closeVotingPlayerCard();
       });
+
+      bindBetaDebugToggle();
     },
     resetToSetup() {
       restartGame();

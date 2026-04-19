@@ -12,34 +12,43 @@
 <div class="notification" id="notification"></div>
 
 <div class="auth-overlay" id="auth-overlay">
-  <div class="auth-card">
-    <h2>Авторизация</h2>
-    <p class="auth-subtitle">Для доступа к профилю выполните вход или регистрацию</p>
+  <div class="auth-layout">
+    <button type="button" class="auth-close-btn" id="btn-auth-close" aria-label="Закрыть окно входа">×</button>
+    <div class="auth-intro">
+      <h2>Авторизация</h2>
+      <p class="auth-subtitle">Для доступа к профилю выполните вход или регистрацию</p>
+    </div>
 
     <div class="auth-grid">
-      <form id="login-form" class="auth-form" autocomplete="on">
+      <section class="auth-panel" id="auth-panel-login">
         <h3>Вход</h3>
-        <label for="login-username">Логин</label>
-        <input type="text" id="login-username" maxlength="30" required />
-        <label for="login-password">Пароль</label>
-        <input type="password" id="login-password" maxlength="50" required />
-        <button type="submit" class="btn btn-primary">Войти</button>
-      </form>
+        <form id="login-form" class="auth-form" autocomplete="on">
+          <label for="login-username">Логин</label>
+          <input type="text" id="login-username" maxlength="30" required />
+          <label for="login-password">Пароль</label>
+          <input type="password" id="login-password" maxlength="50" required />
+          <button type="submit" class="btn btn-primary">Войти</button>
+          <button type="button" class="btn btn-secondary auth-switch-btn" id="btn-show-register">Регистрация</button>
+        </form>
+      </section>
 
-      <form id="register-form" class="auth-form" autocomplete="on">
+      <section class="auth-panel" id="auth-panel-register" style="display:none;">
         <h3>Регистрация</h3>
-        <label for="register-username">Логин</label>
-        <input type="text" id="register-username" maxlength="30" required />
-        <label for="register-password">Пароль</label>
-        <input type="password" id="register-password" maxlength="50" required />
-        <label for="register-role">Роль</label>
-        <select id="register-role" required>
-          <option value="player">Игрок</option>
-          <option value="host">Ведущий</option>
-          <option value="admin">Администратор</option>
-        </select>
-        <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
-      </form>
+        <form id="register-form" class="auth-form" autocomplete="on">
+          <label for="register-username">Логин</label>
+          <input type="text" id="register-username" maxlength="30" required />
+          <label for="register-password">Пароль</label>
+          <input type="password" id="register-password" maxlength="50" required />
+          <label for="register-role">Роль</label>
+          <select id="register-role" required>
+            <option value="player">Игрок</option>
+            <option value="host">Ведущий</option>
+            <option value="admin">Администратор</option>
+          </select>
+          <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
+          <button type="button" class="btn btn-primary auth-switch-btn" id="btn-show-login">Вернуться ко входу</button>
+        </form>
+      </section>
     </div>
   </div>
 </div>
@@ -47,10 +56,10 @@
 <header class="game-header">
   <div class="auth-userbar">
     <span id="auth-status">Не авторизован</span>
+    <button class="btn btn-primary" id="btn-login">Вход</button>
     <a class="btn btn-secondary" href="index.html">К игре</a>
     <button class="btn btn-secondary" id="btn-logout" style="display:none;">Выйти</button>
   </div>
-  <div class="game-logo">👤</div>
   <h1 class="game-title">Профиль пользователя</h1>
   <p class="game-subtitle">Управление вашей учетной записью</p>
 </header>
