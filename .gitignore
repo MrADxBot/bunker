@@ -2,3 +2,4 @@ desktop.ini
 .venv/
 api/data/rooms/*.json
 !api/data/rooms/.gitkeep
+*.db
