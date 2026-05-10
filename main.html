@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Бункер — Браузерная игра</title>
+  <meta name="description" content="Бета-версия браузерной социальной игры Бункер. Апокалипсис уже здесь — кто попадёт в бункер?" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50' y='65' text-anchor='middle' font-size='60' font-family='Arial' font-weight='700'>B</text></svg>" />
+  <style>
+    .menu-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      padding: 1.5rem;
+    }
+
+    .menu-container {
+      text-align: center;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    .menu-title {
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 2.5rem;
+      letter-spacing: 2px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .menu-btn {
+      padding: 1.2rem 2rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border: 2px solid var(--accent-blue);
+      background: rgba(29, 78, 216, 0.1);
+      color: #ffffff;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .menu-btn:hover {
+      background: var(--accent-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(29, 78, 216, 0.4);
+    }
+
+    .menu-btn:active {
+      transform: translateY(0);
+    }
+
+    .menu-subtitle {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      margin-top: 2rem;
+    }
+
+    .auth-header {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+    }
+
+    .auth-header .btn {
+      font-size: 0.9rem;
+      padding: 0.6rem 1rem;
+    }
+
+    .search-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .search-title-wrap h2 {
+      margin-bottom: 0.35rem;
+      font-size: 1.5rem;
+    }
+
+    .search-title-wrap p {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+    }
+
+    .search-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.85rem;
+      align-items: end;
+      margin-bottom: 1.2rem;
+    }
+
+    .search-field label {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .search-field input {
+      width: 100%;
+      padding: 0.8rem 0.95rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card2);
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .search-field input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .room-results {
+      display: grid;
+      gap: 0.85rem;
+      margin-top: 1rem;
+    }
+
+    .room-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.85rem;
+      align-items: center;
+    }
+
+    .room-card .room-code {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: 0.08em;
+    }
+
+    .room-card .room-meta {
+      margin-top: 0.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+    }
+
+    .room-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .room-pill.open {
+      background: rgba(5, 150, 105, 0.1);
+      color: #047857;
+      border-color: rgba(5, 150, 105, 0.25);
+    }
+
+    .room-pill.busy {
+      background: rgba(220, 38, 38, 0.1);
+      color: #b91c1c;
+      border-color: rgba(220, 38, 38, 0.25);
+    }
+
+    .room-empty {
+      padding: 1.25rem;
+      border: 1px dashed var(--border-accent);
+      border-radius: var(--radius);
+      color: var(--text-secondary);
+      text-align: center;
+      background: rgba(248, 250, 252, 0.7);
+    }
+
+    .room-card .btn {
+      min-width: 140px;
+      justify-content: center;
+    }
+
+    .search-actions-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .search-count {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 640px) {
+      .menu-title {
+        font-size: 2.75rem;
+      }
+
+      .search-controls,
+      .room-card {
+        grid-template-columns: 1fr;
+      }
+
+      .search-header {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============ NOTIFICATION ============ -->
+<div class="notification" id="notification"></div>
+
+<!-- ============ AUTH HEADER ============ -->
+<div class="auth-header">
+  <span id="auth-status" style="color: #94a3b8;">Не авторизован</span>
+  <button class="btn btn-primary" id="btn-login">Вход</button>
+  <a class="btn btn-secondary" href="profile.html">Профиль</a>
+  <button class="btn btn-secondary" id="btn-logout" style="display:none;">Выйти</button>
+</div>
+
+<!-- ============ MAIN MENU ============ -->
+<div class="menu-screen">
+  <div class="menu-container">
+    <h1 class="menu-title">БУНКЕР</h1>
+    
+    <div class="menu-buttons">
+      <button class="menu-btn" id="btn-play" onclick="location.href='index.html?create=1'">
+        Играть
+      </button>
+      <button class="menu-btn" id="btn-rules-menu">
+        Правила
+      </button>
+      <button class="menu-btn" id="btn-find-game">
+        Найти игру
+      </button>
+      <button class="menu-btn" id="btn-join-code">
+        Войти по коду
+      </button>
+    </div>
+
+    <p class="menu-subtitle">Браузерная социальная игра на выживание</p>
+  </div>
+</div>
+
+<!-- ============ RULES MODAL ============ -->
+<div class="modal-overlay" id="rules-modal">
+  <div class="modal">
+    <button class="modal-close" id="btn-close-rules">×</button>
+    <h2>Правила игры «Бункер»</h2>
+
+    <h3>Сюжет и цель</h3>
+    <p>На Земле глобальная катастрофа. В бункер попадёт только часть группы, остальные останутся снаружи. Ваша задача — убедить других, что именно ваш персонаж полезен для выживания и восстановления жизни после выхода из бункера.</p>
+
+    <h3>Режимы из оригинальных правил</h3>
+    <ul>
+      <li><strong>Базовый режим</strong>: короткий финал, главная цель — попасть в бункер.</li>
+      <li><strong>История выживания</strong>: расширенный финал с дополнительной угрозой и обсуждением, кто реально выжил бы после катастрофы.</li>
+      <li><strong>Цель «Спасение»</strong>: рекомендуется для компании до 7 игроков.</li>
+      <li><strong>Цель «Возрождение»</strong>: рекомендуется от 8 игроков (желательно наличие пары, способной продолжить род).</li>
+    </ul>
+
+    <h3>Подготовка к игре</h3>
+    <ul>
+      <li>Добавьте игроков (от 2 до 12 человек).</li>
+      <li>Каждый получает характеристики персонажа: профессию, здоровье, хобби, багаж, факт/фобию и карту действия.</li>
+      <li>Откройте случайную катастрофу и описание бункера.</li>
+      <li>В этой версии приложения вместимость бункера вычисляется автоматически: половина игроков (округление вверх), но при 3 игроках в бункер попадает только 1.</li>
+    </ul>
+
+    <h3>Структура раунда (по материалам документа)</h3>
+    <ul>
+      <li><strong>Исследование бункера</strong>: открывается новая информация о бункере.</li>
+      <li><strong>Круг открытия карт</strong>: игроки по очереди раскрывают по одной карте и аргументируют, почему должны попасть в бункер.</li>
+      <li><strong>Голосование</strong>: группа определяет кандидата на выбывание.</li>
+      <li>В оригинальных правилах игра длится до 5 раундов, но на практике раунды идят до нужного числа выбывших.</li>
+    </ul>
+
+    <h3>Голосование</h3>
+    <ul>
+      <li>Перед голосованием проведите короткое общее обсуждение кандидатов.</li>
+      <li>Голосуйте за выбывание игроков.</li>
+      <li>Игрок с наибольшим числом голосов выбывает.</li>
+      <li>При ничьей дайте кандидатам короткую защиту и переголосуйте.</li>
+    </ul>
+
+    <h3>Финал</h3>
+    <ul>
+      <li>Когда число невыбывших игроков становится равно числу мест в бункере, игра заканчивается.</li>
+      <li>Выжившие считаются попавшими в бункер.</li>
+      <li>В расширенном формате можно дополнительно обсудить, пережила бы эта команда катастрофу и случайную угрозу.</li>
+    </ul>
+
+    <h3>Советы:</h3>
+    <ul>
+      <li>Держите эмоции в рамках игры: вы оцениваете персонажей, а не людей.</li>
+      <li>Для вашей компании можно убрать карты, которые не подходят по тематике.</li>
+      <li>Сильнее всего побеждает команда с разнообразными полезными навыками.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ FIND GAME MODAL ============ -->
+<div class="modal-overlay" id="find-game-modal">
+  <div class="modal">
+    <button class="modal-close" id="btn-close-find">×</button>
+    <div class="search-header">
+      <div class="search-title-wrap">
+        <h2>Поиск игр</h2>
+        <p>Комнаты с игроками, статусом и быстрым входом в лобби.</p>
+      </div>
+      <button class="btn btn-secondary" id="btn-refresh-rooms">Обновить</button>
+    </div>
+
+    <div class="search-controls">
+      <div class="search-field">
+        <label for="search-player-name">Ваше имя для входа</label>
+        <input type="text" id="search-player-name" maxlength="30" placeholder="Например: Артём" />
+      </div>
+    </div>
+
+    <div class="search-actions-row">
+      <span class="search-count" id="rooms-count">Комнат пока нет</span>
+    </div>
+
+    <div class="room-results" id="room-results"></div>
+  </div>
+</div>
+
+<!-- ============ JOIN CODE MODAL ============ -->
+<div class="modal-overlay" id="join-code-modal">
+  <div class="modal">
+    <button class="modal-close" id="btn-close-join">×</button>
+    <h2>Войти в комнату по коду</h2>
+    <div class="room-form-grid" style="margin-top: 1.5rem;">
+      <div class="room-field">
+        <label for="join-username">Ваше имя</label>
+        <input type="text" id="join-username" maxlength="30" placeholder="Например: Артём" />
+      </div>
+      <div class="room-field">
+        <label for="join-code">Код комнаты</label>
+        <input type="text" id="join-code" maxlength="6" placeholder="Например: A7K2Q9" />
+      </div>
+    </div>
+    <div class="card-actions" style="margin-top: 1.5rem;">
+      <button class="btn btn-secondary" id="btn-cancel-join">Отмена</button>
+      <button class="btn btn-primary" id="btn-submit-join">Войти</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ AUTH OVERLAY ============ -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-layout">
+    <button type="button" class="auth-close-btn" id="btn-auth-close" aria-label="Закрыть окно входа">×</button>
+
+    <div class="auth-grid">
+      <section class="auth-panel" id="auth-panel-login">
+        <h3>Вход</h3>
+        <form id="login-form" class="auth-form" autocomplete="on">
+          <label for="login-username">Логин</label>
+          <input type="text" id="login-username" maxlength="30" required />
+          <label for="login-password">Пароль</label>
+          <input type="password" id="login-password" maxlength="50" required />
+          <button type="submit" class="btn btn-primary">Войти</button>
+          <button type="button" class="btn btn-secondary auth-switch-btn" id="btn-show-register">Регистрация</button>
+        </form>
+      </section>
+
+      <section class="auth-panel" id="auth-panel-register" style="display:none;">
+        <h3>Регистрация</h3>
+        <form id="register-form" class="auth-form" autocomplete="on">
+          <label for="register-username">Логин</label>
+          <input type="text" id="register-username" maxlength="30" required />
+          <label for="register-password">Пароль</label>
+          <input type="password" id="register-password" maxlength="50" required />
+          <label for="register-role">Роль</label>
+          <select id="register-role" required>
+            <option value="player">Игрок</option>
+            <option value="host">Ведущий</option>
+            <option value="admin">Администратор</option>
+          </select>
+          <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
+          <button type="button" class="btn btn-primary auth-switch-btn" id="btn-show-login">Вернуться ко входу</button>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+const ROOMS_API = 'api/rooms.php';
+let roomsPollTimer = null;
+
+// Helper function to toggle modal visibility
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.add('open');
+
+  if (modalId === 'find-game-modal') {
+    syncSearchNameField();
+    loadRooms();
+    startRoomsAutoRefresh();
+  }
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove('open');
+
+  if (modalId === 'find-game-modal') {
+    stopRoomsAutoRefresh();
+  }
+}
+
+function startRoomsAutoRefresh() {
+  stopRoomsAutoRefresh();
+  roomsPollTimer = setInterval(loadRooms, 6000);
+}
+
+function stopRoomsAutoRefresh() {
+  if (roomsPollTimer) {
+    clearInterval(roomsPollTimer);
+    roomsPollTimer = null;
+  }
+}
+
+function getSearchPlayerName() {
+  const user = window.BunkerAuth && typeof BunkerAuth.getCurrentUser === 'function'
+    ? BunkerAuth.getCurrentUser()
+    : null;
+  const field = document.getElementById('search-player-name');
+  const fieldValue = field ? field.value.trim() : '';
+  return (user && user.username) || fieldValue;
+}
+
+function syncSearchNameField() {
+  const field = document.getElementById('search-player-name');
+  if (!field) return;
+  const user = window.BunkerAuth && typeof BunkerAuth.getCurrentUser === 'function'
+    ? BunkerAuth.getCurrentUser()
+    : null;
+  if (!field.value.trim() && user && user.username) {
+    field.value = user.username;
+  }
+}
+
+function roomStatusClass(room) {
+  return room.started ? 'busy' : 'open';
+}
+
+function roomStatusText(room) {
+  if (room.started) return 'Игра идёт';
+  if (room.membersCount >= room.capacity) return 'Лобби заполнено';
+  return 'В лобби';
+}
+
+function renderRooms(rooms) {
+  const results = document.getElementById('room-results');
+  const counter = document.getElementById('rooms-count');
+  if (!results || !counter) return;
+
+  // Карточки строятся на клиенте из краткого ответа API, поэтому здесь же
+  // можно сразу решить, показывать кнопку входа или отключить её.
+  results.innerHTML = '';
+  const list = Array.isArray(rooms) ? rooms : [];
+  counter.textContent = list.length ? `Найдено комнат: ${list.length}` : 'Комнат пока нет';
+
+  console.log(`[Rooms] renderRooms: отрисовка ${list.length} комнат`);
+
+  if (!list.length) {
+    results.innerHTML = '<div class="room-empty">Пока нет открытых комнат. Создайте новую через раздел "Играть".</div>';
+    return;
+  }
+
+  list.forEach((room) => {
+    console.log(`[Rooms] Комната: ${room.code}`, { joined: room.membersCount, started: room.started, joinable: room.joinable });
+    
+    const card = document.createElement('div');
+    card.className = 'room-card';
+
+    const canJoin = Boolean(room.joinable && !room.started && room.membersCount < room.capacity);
+    card.innerHTML = `
+      <div>
+        <div class="room-code">${room.code}</div>
+        <div class="room-meta">
+          <span class="room-pill ${roomStatusClass(room)}">${roomStatusText(room)}</span>
+          <span>Игроков: ${room.playersCount}/${room.capacity}</span>
+          <span>В лобби: ${room.membersCount}</span>
+        </div>
+      </div>
+      <div>
+        <button class="btn ${canJoin ? 'btn-primary' : 'btn-secondary'}" ${canJoin ? '' : 'disabled'} data-room-code="${room.code}">
+          ${canJoin ? 'Войти в лобби' : 'Недоступно'}
+        </button>
+      </div>
+    `;
+
+    const button = card.querySelector('button[data-room-code]');
+    if (button && canJoin) {
+      button.addEventListener('click', () => joinRoomFromSearch(room.code));
+    }
+
+    results.appendChild(card);
+  });
+}
+
+async function loadRooms() {
+  const results = document.getElementById('room-results');
+  if (results && !results.children.length) {
+    results.innerHTML = '<div class="room-empty">Загружаем комнаты...</div>';
+  }
+
+  try {
+    console.log('[Rooms] Запрашиваем список комнат...');
+    // Запрашиваем только сводный список комнат. Сервер уже сам очищает
+    // неактуальные JSON-файлы и отмечает, какие лобби ещё доступны.
+    const response = await fetch(ROOMS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list' }),
+    });
+    
+    console.log(`[Rooms] Ответ API: статус ${response.status}`);
+    
+    const data = await response.json();
+    console.log(`[Rooms] Данные полученных комнат:`, data);
+    
+    if (!response.ok || !data.ok) {
+      throw new Error((data && data.error) || 'Не удалось загрузить список комнат');
+    }
+    
+    const rooms = Array.isArray(data.rooms) ? data.rooms : [];
+    console.log(`[Rooms] Загружено комнат: ${rooms.length}`);
+    renderRooms(rooms);
+  } catch (error) {
+    console.error('[Rooms] Ошибка при загрузке комнат:', error);
+    const resultsNode = document.getElementById('room-results');
+    if (resultsNode) {
+      resultsNode.innerHTML = `<div class="room-empty">❌ ${error.message || 'Не удалось загрузить список комнат'}</div>`;
+    }
+  }
+}
+
+function joinRoomFromSearch(roomCode) {
+  const username = getSearchPlayerName();
+  if (!username) {
+    alert('Введите ваше имя для входа');
+    return;
+  }
+
+  const code = String(roomCode || '').trim().toUpperCase();
+  if (!code) {
+    alert('Не удалось определить код комнаты');
+    return;
+  }
+
+  // Поиск не подключается к комнате сам, а передает выбранные параметры
+  // в index.html, где уже отработает стандартный механизм BunkerRooms.
+  const params = new URLSearchParams({ room: code, name: username });
+  window.location.href = `index.html?${params.toString()}`;
+}
+
+// Menu navigation
+document.getElementById('btn-rules-menu').addEventListener('click', () => {
+  openModal('rules-modal');
+});
+
+document.getElementById('btn-find-game').addEventListener('click', () => {
+  openModal('find-game-modal');
+});
+
+// Modal close buttons
+document.getElementById('btn-close-rules').addEventListener('click', () => {
+  closeModal('rules-modal');
+});
+
+document.getElementById('btn-close-find').addEventListener('click', () => {
+  closeModal('find-game-modal');
+});
+
+document.getElementById('btn-refresh-rooms').addEventListener('click', loadRooms);
+
+// When join-code modal opens, auto-fill username from authenticated user
+function openJoinCodeModal() {
+  openModal('join-code-modal');
+  // Попытаемся подтянуть имя текущего пользователя если он авторизован
+  const field = document.getElementById('join-username');
+  if (field && !field.value.trim()) {
+    const user = window.BunkerAuth && typeof BunkerAuth.getCurrentUser === 'function'
+      ? BunkerAuth.getCurrentUser()
+      : null;
+    if (user && user.username) {
+      field.value = user.username;
+    }
+  }
+}
+
+document.getElementById('btn-join-code').addEventListener('click', openJoinCodeModal);
+
+document.getElementById('btn-close-join').addEventListener('click', () => {
+  closeModal('join-code-modal');
+});
+
+document.getElementById('btn-cancel-join').addEventListener('click', () => {
+  closeModal('join-code-modal');
+});
+
+document.getElementById('btn-submit-join').addEventListener('click', () => {
+  const username = document.getElementById('join-username').value.trim();
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  
+  if (!username) {
+    alert('Пожалуйста, введите ваше имя');
+    return;
+  }
+  
+  if (!code) {
+    alert('Пожалуйста, введите код комнаты');
+    return;
+  }
+  
+  // Передаем код и имя через URL параметры, как это делает поиск.
+  // Это позволяет использовать уже работающую логику автоподключения в game.js
+  const params = new URLSearchParams({ room: code, name: username });
+  window.location.href = `index.html?${params.toString()}`;
+});
+
+// Modal overlay click to close
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.classList.remove('open');
+    }
+  });
+});
+
+// Auth functionality initialization
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof BunkerAuth !== 'undefined') {
+    BunkerAuth.init(() => {
+      // Optional callback on auth success
+      closeModal('auth-overlay');
+    });
+  }
+
+  const searchField = document.getElementById('search-player-name');
+  if (searchField && window.BunkerAuth && typeof BunkerAuth.getCurrentUser === 'function') {
+    const currentUser = BunkerAuth.getCurrentUser();
+    if (currentUser && currentUser.username) {
+      searchField.value = currentUser.username;
+    }
+  }
+
+  // Подгружаем список сразу после открытия страницы, чтобы поиск по коду
+  // был доступен без дополнительного клика.
+  loadRooms();
+});
+</script>
+
+</body>
+</html>

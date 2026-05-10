@@ -176,14 +176,21 @@
           </div>
         </div>
         <div class="room-actions">
-          <button class="btn btn-primary" id="btn-room-create">Создать комнату</button>
-          <button class="btn btn-secondary" id="btn-room-join">Войти по коду</button>
-          <button class="btn btn-danger" id="btn-room-leave" disabled>Выйти из комнаты</button>
+          <button class="btn btn-primary" id="btn-room-create" style="display:none;">Создать комнату</button>
+          <button class="btn btn-secondary" id="btn-room-join" style="display:none;">Войти по коду</button>
+          <button type="button" class="btn btn-danger" id="btn-room-leave" disabled>Выйти из комнаты</button>
         </div>
         <p class="room-status" id="room-status"></p>
         <div class="room-members-wrap" id="room-members-wrap" style="display:none;">
           <p class="room-members-title">Участники онлайн</p>
           <div class="room-members" id="room-members"></div>
+          <div class="room-ready-wrap" id="room-ready-wrap" style="display:none;">
+            <label class="room-ready-toggle" for="room-ready-checkbox">
+              <input type="checkbox" id="room-ready-checkbox" />
+              <span>Я готов</span>
+            </label>
+            <span class="room-ready-summary" id="room-ready-summary"></span>
+          </div>
         </div>
       </div>
 

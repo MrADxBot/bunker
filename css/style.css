@@ -474,6 +474,46 @@ body {
   color: #166534;
 }
 
+.room-member-ready {
+  margin-left: 0.35rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.room-member-ready.ready {
+  color: #16a34a;
+}
+
+.room-member-ready.not-ready {
+  color: #dc2626;
+}
+
+.room-ready-wrap {
+  margin-top: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.room-ready-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.room-ready-toggle input {
+  accent-color: var(--accent-green);
+}
+
+.room-ready-summary {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .player-add-row {
   display: flex;
   gap: 0.5rem;

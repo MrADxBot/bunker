@@ -97,6 +97,92 @@ function roomFilePath(string $dataDir, string $roomCode): string
     return $dataDir . '/' . $roomCode . '.json';
 }
 
+function roomStatus(array $room): array
+{
+    // Для поиска игр нам нужно быстро определить, можно ли войти в лобби.
+    // Если в JSON уже есть запущенная игра, roomStatus помечает комнату как занятую.
+    $game = isset($room['game']) && is_array($room['game']) ? $room['game'] : null;
+    $phase = (string) ($game['phase'] ?? 'setup');
+    $started = $game !== null && $phase !== '' && $phase !== 'setup';
+
+    return [
+        'phase' => $phase,
+        'started' => $started,
+        'label' => $started ? 'Игра идёт' : 'В лобби',
+        'joinable' => !$started,
+    ];
+}
+
+function roomSummary(array $room): array
+{
+    // На страницу поиска возвращается только сводка: код комнаты, число игроков
+    // и текстовый статус. Полное состояние игры остаётся внутри game-чата комнаты.
+    $members = array_values($room['members'] ?? []);
+    $players = array_values($room['players'] ?? []);
+    $status = roomStatus($room);
+
+    return [
+        'code' => (string) ($room['code'] ?? ''),
+        'version' => (int) ($room['version'] ?? 0),
+        'playersCount' => count($players),
+        'membersCount' => count($members),
+        'capacity' => MAX_PLAYERS,
+        'status' => $status['label'],
+        'phase' => $status['phase'],
+        'started' => $status['started'],
+        'joinable' => $status['joinable'] && count($members) < MAX_PLAYERS,
+        'updatedAt' => (int) ($room['updatedAt'] ?? 0),
+    ];
+}
+
+function loadRoomsSummary(string $dataDir): array
+{
+    // Поиск читает все JSON-файлы комнат и показывает их все.
+    // Это важно для преподавателя и для тестирования: даже старые комнаты
+    // должны быть видны, но вход в уже начатые комнаты всё равно блокируется.
+    $rooms = [];
+    foreach (glob($dataDir . '/*.json') ?: [] as $filePath) {
+        $contents = @file_get_contents($filePath);
+        if ($contents === false || trim($contents) === '') {
+            continue;
+        }
+
+        $room = json_decode($contents, true);
+        if (!is_array($room)) {
+            continue;
+        }
+
+        $changed = cleanupInactiveMembers($room);
+        $playersChanged = syncPlayersFromMembers($room);
+        $changed = $changed || $playersChanged;
+
+        if (empty($room['members'])) {
+            @unlink($filePath);
+            continue;
+        }
+
+        if ($changed) {
+            $room['version'] = (int) ($room['version'] ?? 0) + 1;
+            $room['updatedAt'] = time();
+            @file_put_contents(
+                $filePath,
+                json_encode($room, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+            );
+        }
+
+        $rooms[] = roomSummary($room);
+    }
+
+    usort($rooms, static function (array $left, array $right): int {
+        if ($left['started'] !== $right['started']) {
+            return $left['started'] <=> $right['started'];
+        }
+        return $right['updatedAt'] <=> $left['updatedAt'];
+    });
+
+    return $rooms;
+}
+
 function withRoomLock(string $filePath, callable $handler)
 {
     $handle = fopen($filePath, 'c+');
@@ -229,6 +315,22 @@ function syncPlayersFromMembers(array &$room): bool
 
     $room['players'] = $nextPlayers;
     return $nextPlayers !== $currentPlayers;
+}
+
+function areAllMembersReady(array $room): bool
+{
+    $members = $room['members'] ?? [];
+    if (!is_array($members) || count($members) === 0) {
+        return false;
+    }
+
+    foreach ($members as $member) {
+        if (empty($member['ready'])) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 function getAliveIndexes(array $players): array
@@ -673,6 +775,7 @@ function roomPayload(array $room): array
             'clientId' => (string) ($member['clientId'] ?? ''),
             'username' => (string) ($member['username'] ?? ''),
             'isHost' => (string) ($member['clientId'] ?? '') === $hostId,
+            'ready' => !empty($member['ready']),
         ];
     }
 
@@ -731,6 +834,7 @@ if ($action === 'create') {
                 'clientId' => $clientId,
                 'username' => $username,
                 'lastSeen' => $now,
+                'ready' => false,
             ],
         ],
     ];
@@ -747,6 +851,20 @@ if ($action === 'create') {
         'clientId' => $clientId,
         'room' => roomPayload($room),
     ]);
+}
+
+if ($action === 'list') {
+    // Экран поиска не должен раскрывать лишние данные, поэтому отдаём только
+    // короткую карточку комнаты вместо полного JSON с игрой.
+    respond([
+        'ok' => true,
+        'rooms' => loadRoomsSummary($dataDir),
+    ]);
+}
+
+$roomActions = ['join', 'poll', 'setReady', 'updatePlayers', 'startGame', 'gameAction', 'leave'];
+if (!in_array($action, $roomActions, true)) {
+    respond(['ok' => false, 'error' => 'Неизвестное действие'], 422);
 }
 
 $roomCode = sanitizeRoomCode((string) ($body['roomCode'] ?? ''));
@@ -769,6 +887,14 @@ if ($action === 'join') {
     $result = withRoomLock($filePath, static function (array $room, $handle) use ($roomCode, $username, $clientId) {
         cleanupInactiveMembers($room);
 
+        // После старта игры новые участники уже не должны попадать в лобби.
+        // Это правило нужно и для списка комнат, и для ручного входа по коду.
+        $game = $room['game'] ?? null;
+        $phase = is_array($game) ? (string) ($game['phase'] ?? 'setup') : 'setup';
+        if ($game !== null && $phase !== '' && $phase !== 'setup') {
+            respond(['ok' => false, 'error' => 'Игра уже началась!'], 409);
+        }
+
         $room['code'] = $roomCode;
         $room['version'] = (int) ($room['version'] ?? 0);
         $room['players'] = array_values($room['players'] ?? []);
@@ -783,6 +909,7 @@ if ($action === 'join') {
             'clientId' => $clientId,
             'username' => $finalUsername,
             'lastSeen' => time(),
+            'ready' => false,
         ];
         syncPlayersFromMembers($room);
 
@@ -836,6 +963,46 @@ if ($action === 'poll') {
     respond($result);
 }
 
+if ($action === 'setReady') {
+    $clientId = (string) ($body['clientId'] ?? '');
+    $ready = !empty($body['ready']);
+
+    if ($clientId === '') {
+        respond(['ok' => false, 'error' => 'clientId обязателен'], 422);
+    }
+
+    $result = withRoomLock($filePath, static function (array $room, $handle) use ($clientId, $ready) {
+        cleanupInactiveMembers($room);
+
+        $updated = false;
+        foreach ($room['members'] as &$member) {
+            if ((string) ($member['clientId'] ?? '') === $clientId) {
+                $member['ready'] = $ready;
+                $updated = true;
+                break;
+            }
+        }
+
+        if (!$updated) {
+            respond(['ok' => false, 'error' => 'Клиент не состоит в комнате'], 403);
+        }
+
+        $room['version'] = (int) ($room['version'] ?? 0) + 1;
+        $room['updatedAt'] = time();
+
+        rewind($handle);
+        ftruncate($handle, 0);
+        fwrite($handle, json_encode($room, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+
+        return [
+            'ok' => true,
+            'room' => roomPayload($room),
+        ];
+    });
+
+    respond($result);
+}
+
 if ($action === 'updatePlayers') {
     respond([
         'ok' => false,
@@ -866,6 +1033,10 @@ if ($action === 'startGame') {
         $players = $game['players'] ?? [];
         if (!is_array($players) || count($players) < 2) {
             respond(['ok' => false, 'error' => 'Недостаточно игроков для старта'], 422);
+        }
+
+        if (!areAllMembersReady($room)) {
+            respond(['ok' => false, 'error' => 'Не все игроки готовы'], 409);
         }
 
         $room['game'] = $game;

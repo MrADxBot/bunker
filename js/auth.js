@@ -1,13 +1,18 @@
 // ==================== AUTH MODULE ====================
 
 const BunkerAuth = (() => {
-  const USERS_KEY = "bunker_users_v1";
+  const USERS_API = "api/users.php";
   const SESSION_KEY = "bunker_current_user_v1";
   const ROLE_LABELS = {
     player: "Игрок",
     host: "Ведущий",
     admin: "Администратор",
   };
+
+  // Пользователи теперь хранятся на сервере в JSON-файле.
+  // В браузере остаётся только короткая сессия: имя текущего пользователя.
+  let usersCache = [];
+  let usersLoaded = false;
 
   const $ = (id) => document.getElementById(id);
 
@@ -20,16 +25,64 @@ const BunkerAuth = (() => {
     notif._timeout = setTimeout(() => notif.classList.remove("show"), 3000);
   }
 
-  function getUsers() {
+  function request(payload) {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", USERS_API, false);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(JSON.stringify(payload));
+
+    let data = {};
     try {
-      return JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
+      data = JSON.parse(xhr.responseText || "{}");
     } catch {
-      return [];
+      console.error(`[BunkerAuth] Ошибка парсинга JSON ответа API:`, xhr.responseText);
+      throw new Error("Сервер вернул некорректный ответ");
+    }
+
+    if (xhr.status < 200 || xhr.status >= 300 || !data.ok) {
+      const errorMsg = data.error || "Ошибка запроса к пользователям";
+      console.error(`[BunkerAuth] Ошибка API (статус ${xhr.status}):`, errorMsg, data);
+      throw new Error(errorMsg);
+    }
+
+    return data;
+  }
+
+  function normalizeUsers(users) {
+    return Array.isArray(users)
+      ? users.map((user) => ({
+          username: String(user.username || ""),
+          role: String(user.role || "player"),
+          createdAt: String(user.createdAt || ""),
+        }))
+      : [];
+  }
+
+  function loadUsers(force = false) {
+    if (usersLoaded && !force) {
+      return usersCache;
+    }
+
+    try {
+      const data = request({ action: "list" });
+      usersCache = normalizeUsers(data.users);
+      usersLoaded = true;
+      console.log(`[BunkerAuth] Загружено пользователей: ${usersCache.length}`);
+      return usersCache;
+    } catch (error) {
+      console.error(`[BunkerAuth] Ошибка при загрузке пользователей:`, error);
+      usersCache = [];
+      usersLoaded = true;
+      return usersCache;
     }
   }
 
-  function saveUsers(users) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  function refreshUsers() {
+    return loadUsers(true);
+  }
+
+  function getUsers() {
+    return loadUsers(false).slice();
   }
 
   function hashPassword(password) {
@@ -106,42 +159,44 @@ const BunkerAuth = (() => {
   }
 
   function register(username, password, role = "player") {
-    const users = getUsers();
-    const exists = users.some((u) => u.username.toLowerCase() === username.toLowerCase());
-    if (exists) {
-      notify("Такой логин уже существует", "warning");
+    try {
+      request({
+        action: "register",
+        username,
+        passwordHash: hashPassword(password),
+        role,
+      });
+      refreshUsers();
+      notify("Регистрация успешна. Теперь выполните вход.", "success");
+      return true;
+    } catch (error) {
+      notify(error.message || "Не удалось зарегистрировать пользователя", "warning");
       return false;
     }
-
-    users.push({
-      username,
-      passwordHash: hashPassword(password),
-      role,
-      createdAt: new Date().toISOString(),
-    });
-    saveUsers(users);
-    notify("Регистрация успешна. Теперь выполните вход.", "success");
-    return true;
   }
 
   function login(username, password) {
-    const users = getUsers();
-    const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
-    if (!user) {
-      notify("Пользователь не найден", "error");
+    try {
+      const data = request({
+        action: "login",
+        username,
+        passwordHash: hashPassword(password),
+      });
+      const user = data.user || null;
+      if (!user) {
+        throw new Error("Пользователь не найден");
+      }
+
+      setCurrentUser(user.username);
+      refreshUsers();
+      updateHeaderAuthState();
+      closeAuthOverlay();
+      notify(`Добро пожаловать, ${user.username}!`, "success");
+      return true;
+    } catch (error) {
+      notify(error.message || "Не удалось выполнить вход", "error");
       return false;
     }
-
-    if (user.passwordHash !== hashPassword(password)) {
-      notify("Неверный пароль", "error");
-      return false;
-    }
-
-    setCurrentUser(user.username);
-    updateHeaderAuthState();
-    closeAuthOverlay();
-    notify(`Добро пожаловать, ${user.username}!`, "success");
-    return true;
   }
 
   function logout() {
@@ -189,7 +244,11 @@ const BunkerAuth = (() => {
     const username = getCurrentUsername();
     if (!username) return null;
     const users = getUsers();
-    return users.find((u) => u.username === username) || null;
+    const user = users.find((u) => u.username === username) || null;
+    if (!user && username) {
+      console.warn(`[BunkerAuth] Пользователь "${username}" не найден в списке`, { username, users });
+    }
+    return user;
   }
 
   function isAdmin() {
@@ -216,18 +275,20 @@ const BunkerAuth = (() => {
       return false;
     }
 
-    const users = getUsers();
-    const idx = users.findIndex((u) => u.username === username);
-    if (idx === -1) {
-      notify("Пользователь не найден", "warning");
+    try {
+      request({
+        action: "updateRole",
+        username,
+        newRole,
+      });
+      refreshUsers();
+      updateHeaderAuthState();
+      notify(`Роль пользователя ${username} обновлена`, "success");
+      return true;
+    } catch (error) {
+      notify(error.message || "Не удалось обновить роль", "warning");
       return false;
     }
-
-    users[idx].role = newRole;
-    saveUsers(users);
-    updateHeaderAuthState();
-    notify(`Роль пользователя ${username} обновлена`, "success");
-    return true;
   }
 
   function deleteUser(username) {
@@ -242,16 +303,18 @@ const BunkerAuth = (() => {
       return false;
     }
 
-    const users = getUsers();
-    const filtered = users.filter((u) => u.username !== username);
-    if (filtered.length === users.length) {
-      notify("Пользователь не найден", "warning");
+    try {
+      request({
+        action: "delete",
+        username,
+      });
+      refreshUsers();
+      notify(`Пользователь ${username} удален`, "success");
+      return true;
+    } catch (error) {
+      notify(error.message || "Не удалось удалить пользователя", "warning");
       return false;
     }
-
-    saveUsers(filtered);
-    notify(`Пользователь ${username} удален`, "success");
-    return true;
   }
 
   function isAuthenticated() {
@@ -270,6 +333,7 @@ const BunkerAuth = (() => {
 
   function init(onAuthSuccess, options = {}) {
     const { openOnUnauth = false } = options;
+    loadUsers();
     updateHeaderAuthState();
     bindEvents(onAuthSuccess);
 
