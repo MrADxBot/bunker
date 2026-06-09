@@ -99,27 +99,29 @@ body {
   position: fixed;
   inset: 0;
   z-index: 1200;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: clamp(1rem, 3vw, 2rem);
 }
 .auth-overlay.open {
   display: flex;
 }
 .auth-layout,
 .auth-card {
-  width: min(520px, 100%);
+  width: min(560px, 100%);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.1rem;
-  box-shadow: var(--shadow);
+  padding: 1.35rem;
+  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.16);
   position: relative;
 }
 .auth-intro {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.95rem;
   padding-right: 2rem;
 }
 .auth-intro h2 {
@@ -133,12 +135,12 @@ body {
 .auth-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.9rem;
+  gap: 1rem;
 }
 .auth-panel {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg-dark);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   padding: 1rem;
   width: 100%;
 }
@@ -171,6 +173,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+}
+.auth-form .btn {
+  width: 100%;
 }
 .auth-form label {
   font-size: 0.8rem;

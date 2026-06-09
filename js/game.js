@@ -431,6 +431,7 @@ const BunkerGame = (() => {
       await window.BunkerRooms.leaveRoom();
       showNotification("Вы вышли из комнаты", "info");
       renderRoomState();
+      window.location.href = "main.html";
     } catch (err) {
       showNotification(err.message || "Не удалось выйти из комнаты", "error");
     }
@@ -1365,6 +1366,7 @@ const BunkerGame = (() => {
     if (room.connected && window.BunkerRooms) {
       try {
         await window.BunkerRooms.leaveRoom();
+        window.location.href = "main.html";
       } catch (err) {
         showNotification(err.message || "Не удалось выйти в главное меню", "error");
       }
@@ -1390,6 +1392,7 @@ const BunkerGame = (() => {
       _playerNames: [],
     };
     initSetup();
+    window.location.href = "main.html";
   }
 
   // ---- Utilities ----
