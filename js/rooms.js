@@ -191,6 +191,20 @@ const BunkerRooms = (() => {
     }
   }
 
+  async function setReady(ready) {
+    if (!state.connected) throw new Error("Нет подключения к комнате");
+
+    const data = await request({
+      action: "setReady",
+      roomCode: state.roomCode,
+      clientId: state.clientId,
+      ready: Boolean(ready),
+    });
+
+    applyRoom(data.room);
+    return getState();
+  }
+
   async function updatePlayers(players) {
     if (!state.connected) return null;
 
@@ -263,6 +277,7 @@ const BunkerRooms = (() => {
     joinRoom,
     leaveRoom,
     updatePlayers,
+    setReady,
     startGameSession,
     gameAction,
     getState,

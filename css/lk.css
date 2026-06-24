@@ -1,0 +1,173 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+body {
+  background: #000000a0 url('../images/backphoto.PNG');
+  background-size: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: none;
+  position: relative;
+}
+
+.lk-page {
+  margin: 100px auto;
+  padding: 30px;
+}
+
+
+.logo-top-left {
+  position: fixed;
+  top: 30px;
+  left: 30px;
+  z-index: 100;
+}
+
+.small-logo {
+  width: 210px;
+  height: auto;
+}
+
+/* ===== кнопки справа ===== */
+.top-actions {
+  position: fixed;
+  top: 40px;
+  right: 30px;
+  display: flex;
+  gap: 30px;
+  z-index: 100;
+}
+
+.top-btn {
+  font-family: 'Rubik Glitch';
+  font-size: 16px;
+  
+  background: none;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s;
+  text-transform: uppercase;
+}
+
+.top-btn:hover {
+  color: #FFA600;
+}
+
+.top-btn:active {
+  color: #ffffff;
+}
+
+
+/* ===== секции ===== */
+.lk-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* Личн дан + статистика */
+.lk-row {
+  display: flex;
+  gap: 30px;
+}
+
+.lk-row .lk-section:first-child {
+  flex: none;
+  width: 400px;
+}
+
+.lk-row .lk-section:last-child {
+  flex: none;
+  width: 400px;
+}
+
+/* ===== друзья ===== */
+.lk-section-full {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(5px);
+  border: 1px solid #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(255, 166, 0, 0.3);
+  width: 830px;
+}
+
+.lk-section {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(5px);
+  border: 1px solid #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(255, 166, 0, 0.3);
+}
+
+.section-title {
+  font-family: 'Rubik Glitch';
+  font-size: 30px;
+  color: #ffffff;
+  padding: 27px 30px 30px;
+}
+
+.section-content {
+  padding: 0 30px 27px;
+}
+
+
+
+.info-row {
+  font-family: 'Manrope';
+  font-weight: 300;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.info-value {
+  font-size: 16px;
+  color: #ffffff;
+}
+
+/* ===== друзья ===== */
+.friends-list {
+  font-family: 'Manrope';
+  font-weight: 300;
+  display: flex;
+  flex-direction: column;
+}
+
+.friend-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.friend-row:last-child {
+  border-bottom: none;
+}
+
+.friend-name {
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.friend-games {
+  font-size: 16px;
+  color: #ffffff;
+}

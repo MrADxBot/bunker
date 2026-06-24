@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>БУНКЕР — Вход</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css?v=2">
+</head>
+<body>
+
+<!-- ===== УВЕДОМЛЕНИЯ ===== -->
+<div class="notification" id="notification"></div>
+
+<!-- ===== ПРОФИЛЬ ===== -->
+<div class="profile-area" id="profileArea">
+  <button class="profile-btn" id="profileBtn">
+    <img src="images/Profile.svg" alt="Профиль" class="profile-icon" id="profileIcon">
+    <span class="profile-text" id="profileText">Войти</span>
+  </button>
+  <div class="profile-hover-menu" id="profileMenu">
+    <button class="hover-item" id="profileMenuItem">Личный кабинет</button>
+    <button class="hover-item" id="logoutMenuItem">Выйти</button>
+  </div>
+</div>
+
+<!-- ===== ОСНОВНАЯ КАРТОЧКА ===== -->
+<div class="bunker-card">
+  <div class="bunker-header">
+    <img src="images/logo.svg" alt="БУНКЕР" class="logo-svg">
+  </div>
+  <div class="action-row">
+    <button class="action-btn" id="rulesBtn">Правила</button>
+    <button class="action-btn" id="findGameBtn">Найти игру</button>
+    <button class="action-btn" id="joinCodeBtn">Войти по коду</button>
+  </div>
+</div>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ПРАВИЛ ===== -->
+<div class="modal-overlay" id="rulesModal">
+  <div class="modal">
+    <button class="modal-close" id="rulesModalClose">&times;</button>
+    <h2>Правила игры «Бункер»</h2>
+    <h3>Сюжет и цель</h3>
+    <p>На Земле глобальная катастрофа. В бункер попадёт только часть группы, остальные останутся снаружи. Ваша задача — убедить других, что именно ваш персонаж полезен для выживания.</p>
+    <h3>Подготовка к игре</h3>
+    <ul>
+      <li>Добавьте игроков (от 2 до 12 человек).</li>
+      <li>Каждый получает характеристики персонажа: профессию, здоровье, хобби, багаж, факт/фобию и карту действия.</li>
+      <li>Вместимость бункера: половина игроков (округление вверх), при 3 игроках — 1 место.</li>
+    </ul>
+    <h3>Структура раунда</h3>
+    <ul>
+      <li>Игроки по очереди раскрывают по одному атрибуту.</li>
+      <li>После круга открытий проводится голосование.</li>
+      <li>Игрок с наибольшим числом голосов выбывает.</li>
+      <li>Игра продолжается, пока не останется нужное число выживших.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== МОДАЛЬНОЕ ОКНО ВХОДА ПО КОДУ ===== -->
+<div class="modal-overlay" id="joinCodeModal">
+  <div class="modal">
+    <button class="modal-close" id="joinCodeModalClose">&times;</button>
+    <h2>Войти в комнату по коду</h2>
+    <div style="margin-top:1.5rem;">
+      <div style="margin-bottom:1rem;">
+        <label>Ваше имя</label>
+        <input type="text" id="joinUsername" maxlength="30" placeholder="Введите ваше имя">
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label>Код комнаты</label>
+        <input type="text" id="joinCodeInput" maxlength="6" placeholder="Например: A7K2Q9">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-secondary" id="joinCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="joinSubmitBtn">Войти</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== НОВОЕ МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ (в стиле indexnew.html) ===== -->
+<div class="popup-overlay" id="auth-overlay">
+  <div class="popup-container">
+    <button class="popup-close" id="btn-auth-close">&times;</button>
+
+    <div class="popup-header">
+      <img src="images/logo.svg" alt="БУНКЕР" class="popup-title">
+    </div>
+
+    <div class="popup-tabs">
+      <button class="tab-btn active" id="tabLoginBtn">Вход</button>
+      <button class="tab-btn" id="tabRegisterBtn">Регистрация</button>
+    </div>
+
+    <!-- Панель входа (соответствует auth-panel-login) -->
+    <div class="tab-content active" id="auth-panel-login">
+      <form id="login-form" class="popup-form">
+        <div class="input-group-popup">
+          <label class="input-label">Логин</label>
+          <input type="text" id="login-username" class="popup-input" placeholder="Введите логин" required>
+        </div>
+        <div class="input-group-popup">
+          <label class="input-label">Пароль</label>
+          <input type="password" id="login-password" class="popup-input" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="popup-submit-btn">Войти</button>
+      </form>
+    </div>
+
+    <!-- Панель регистрации (соответствует auth-panel-register) -->
+    <div class="tab-content" id="auth-panel-register">
+      <form id="register-form" class="popup-form">
+        <div class="input-group-popup">
+          <label class="input-label">Логин</label>
+          <input type="text" id="register-username" class="popup-input" placeholder="Придумайте логин" required>
+        </div>
+        <div class="input-group-popup">
+          <label class="input-label">Пароль</label>
+          <input type="password" id="register-password" class="popup-input" placeholder="••••••••" required>
+        </div>
+        <div class="input-group-popup">
+          <label class="input-label">Роль</label>
+          <select id="register-role" class="popup-input">
+            <option value="player">Игрок</option>
+            <option value="host">Ведущий</option>
+            <option value="admin">Администратор</option>
+          </select>
+        </div>
+        <button type="submit" class="popup-submit-btn">Зарегистрироваться</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== СКРЫТЫЕ ЭЛЕМЕНТЫ ДЛЯ AUTH.JS ===== -->
+<div style="display:none;">
+  <span id="auth-status"></span>
+  <button id="btn-login"></button>
+  <button id="btn-logout"></button>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+  (function() {
+    'use strict';
+
+    function $(id) { return document.getElementById(id); }
+
+    function showNotification(msg, type) {
+      type = type || 'info';
+      const notif = $('notification');
+      if (!notif) return;
+      notif.textContent = msg;
+      notif.className = 'notification ' + type + ' show';
+      clearTimeout(notif._timeout);
+      notif._timeout = setTimeout(function() {
+        notif.classList.remove('show');
+      }, 3000);
+    }
+
+    function openModal(id) {
+      const el = $(id);
+      if (el) el.classList.add('open');
+    }
+    function closeModal(id) {
+      const el = $(id);
+      if (el) el.classList.remove('open');
+    }
+
+    // Функция обновления профиля (вызывается после входа/выхода)
+    function updateProfileUI() {
+      const user = window.BunkerAuth && typeof window.BunkerAuth.getCurrentUser === 'function'
+        ? window.BunkerAuth.getCurrentUser()
+        : null;
+      const profileText = $('profileText');
+      const profileArea = $('profileArea');
+      const profileIcon = $('profileIcon');
+      if (user && user.username) {
+        profileText.textContent = user.username;
+        profileArea.classList.add('logged-in');
+        if (profileIcon) profileIcon.src = 'images/Profile-orange.svg';
+      } else {
+        profileText.textContent = 'Войти';
+        profileArea.classList.remove('logged-in');
+        if (profileIcon) profileIcon.src = 'images/Profile.svg';
+      }
+    }
+
+    // ===== ИНИЦИАЛИЗАЦИЯ ПОСЛЕ ЗАГРУЗКИ DOM =====
+    document.addEventListener('DOMContentLoaded', function() {
+
+      // ---- Обработчики для кнопок главного экрана ----
+      $('rulesBtn').addEventListener('click', function() {
+        openModal('rulesModal');
+      });
+      $('rulesModalClose').addEventListener('click', function() {
+        closeModal('rulesModal');
+      });
+      $('rulesModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal('rulesModal');
+      });
+
+      $('findGameBtn').addEventListener('click', function() {
+        window.location.href = 'lobbies.html';
+      });
+
+      $('joinCodeBtn').addEventListener('click', function() {
+        const user = window.BunkerAuth && typeof window.BunkerAuth.getCurrentUser === 'function'
+          ? window.BunkerAuth.getCurrentUser()
+          : null;
+        if (user && user.username) {
+          $('joinUsername').value = user.username;
+        }
+        openModal('joinCodeModal');
+      });
+      $('joinCodeModalClose').addEventListener('click', function() {
+        closeModal('joinCodeModal');
+      });
+      $('joinCancelBtn').addEventListener('click', function() {
+        closeModal('joinCodeModal');
+      });
+      $('joinCodeModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal('joinCodeModal');
+      });
+      $('joinSubmitBtn').addEventListener('click', function() {
+        const username = $('joinUsername').value.trim();
+        const code = $('joinCodeInput').value.trim().toUpperCase();
+        if (!username) {
+          showNotification('Введите ваше имя', 'warning');
+          return;
+        }
+        if (!code) {
+          showNotification('Введите код комнаты', 'warning');
+          return;
+        }
+        window.location.href = 'room.html?room=' + encodeURIComponent(code) + '&name=' + encodeURIComponent(username);
+      });
+
+      // ---- Профиль ----
+      // Кнопка "Личный кабинет" в выпадающем меню
+      const profileMenuItem = $('profileMenuItem');
+      if (profileMenuItem) {
+        profileMenuItem.addEventListener('click', function(e) {
+          e.stopPropagation(); // чтобы не закрывалось меню (если нужно)
+          console.log('Переход в личный кабинет');
+          window.location.href = 'profile.html';
+        });
+      } else {
+        console.warn('Элемент #profileMenuItem не найден');
+      }
+
+      // Кнопка "Выйти"
+      const logoutMenuItem = $('logoutMenuItem');
+      if (logoutMenuItem) {
+        logoutMenuItem.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (window.BunkerAuth && typeof window.BunkerAuth.logout === 'function') {
+            window.BunkerAuth.logout();
+            // Обновляем профиль после выхода
+            updateProfileUI();
+          } else {
+            console.warn('BunkerAuth.logout не доступен');
+          }
+        });
+      }
+
+      // Кнопка профиля (открывает попап, если не авторизован)
+      const profileBtn = $('profileBtn');
+      if (profileBtn) {
+        profileBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (window.BunkerAuth && !window.BunkerAuth.isAuthenticated()) {
+            window.BunkerAuth.openAuthOverlay();
+          }
+        });
+      }
+
+      // ---- Управление вкладками попапа ----
+      const tabLogin = $('tabLoginBtn');
+      const tabRegister = $('tabRegisterBtn');
+      const panelLogin = $('auth-panel-login');
+      const panelRegister = $('auth-panel-register');
+
+      function setActiveTab(tab) {
+        [tabLogin, tabRegister].forEach(btn => btn && btn.classList.remove('active'));
+        [panelLogin, panelRegister].forEach(panel => panel && panel.classList.remove('active'));
+
+        if (tab === 'login') {
+          if (tabLogin) tabLogin.classList.add('active');
+          if (panelLogin) panelLogin.classList.add('active');
+        } else {
+          if (tabRegister) tabRegister.classList.add('active');
+          if (panelRegister) panelRegister.classList.add('active');
+        }
+      }
+
+      if (tabLogin && tabRegister) {
+        tabLogin.addEventListener('click', function() { setActiveTab('login'); });
+        tabRegister.addEventListener('click', function() { setActiveTab('register'); });
+      }
+
+      // ---- Инициализация BunkerAuth ----
+      if (window.BunkerAuth && typeof window.BunkerAuth.init === 'function') {
+        window.BunkerAuth.init(function() {
+          // Колбэк после успешной авторизации
+          updateProfileUI();
+          // Закрываем попап (auth.js сам закрывает, но на всякий случай)
+          const overlay = $('auth-overlay');
+          if (overlay) overlay.classList.remove('open');
+        }, { openOnUnauth: false });
+      } else {
+        console.error('BunkerAuth не загружен! Проверьте путь к auth.js');
+        showNotification('Ошибка загрузки модуля авторизации', 'error');
+      }
+
+      // ---- Обновление профиля при загрузке, если пользователь уже авторизован ----
+      setTimeout(function() {
+        if (window.BunkerAuth && window.BunkerAuth.isAuthenticated && window.BunkerAuth.isAuthenticated()) {
+          updateProfileUI();
+        }
+      }, 100);
+
+    }); // конец DOMContentLoaded
+
+    // Экспортируем функцию обновления на случай, если понадобится извне
+    window.updateProfileUI = updateProfileUI;
+
+  })();
+</script>
+
+</body>
+</html>

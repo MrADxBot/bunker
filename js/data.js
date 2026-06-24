@@ -209,16 +209,10 @@ const SPECIAL_TRAITS = [
   "Был участником реалити-шоу «Выживший»",
 ];
 
-/**
- * Get a random item from an array
- */
 function randomItem(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-/**
- * Generate a random player card
- */
 function generatePlayerCard(playerName) {
   const profession = randomItem(PROFESSIONS);
   const health = randomItem(HEALTH_CONDITIONS);
@@ -235,7 +229,6 @@ function generatePlayerCard(playerName) {
     luggage,
     phobiaFact,
     actionCard,
-    // Track which attributes have been revealed
     revealed: {
       profession: false,
       health: false,
@@ -249,16 +242,10 @@ function generatePlayerCard(playerName) {
   };
 }
 
-/**
- * Generate a random catastrophe
- */
 function generateCatastrophe() {
   return randomItem(CATASTROPHES);
 }
 
-/**
- * Generate bunker description with capacity
- */
 function generateBunkerDescription(capacity) {
   const template = randomItem(BUNKER_DESCRIPTIONS);
   return template.replace("{capacity}", capacity);

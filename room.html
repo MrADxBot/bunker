@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Бункер — Игровая комната</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ===== ОБЩИЕ СТИЛИ ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            background-image: radial-gradient(circle at 20% 30%, #1a1a1a 0%, #000000 100%);
+            min-height: 100vh;
+            font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        /* ===== УВЕДОМЛЕНИЯ ===== */
+        .notification {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            padding: 0.85rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            opacity: 0;
+            transform: translateY(-12px);
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 9999;
+            max-width: 340px;
+            pointer-events: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            font-family: 'Manrope', sans-serif;
+        }
+        .notification.show { opacity: 1; transform: translateY(0); }
+        .notification.info { background: #1d4ed8; color: #fff; }
+        .notification.success { background: #059669; color: #fff; }
+        .notification.warning { background: #d97706; color: #111; }
+        .notification.error { background: #dc2626; color: #fff; }
+
+        /* ===== ОСНОВНОЙ КОНТЕЙНЕР ===== */
+        .room-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        /* ===== ШАПКА КОМНАТЫ ===== */
+        .room-header {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid #FFDD9F;
+            border-radius: 16px;
+            padding: 15px 25px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(255, 166, 0, 0.15);
+        }
+        .room-code {
+            font-family: 'Manrope', monospace;
+            font-weight: 600;
+            font-size: 1.6rem;
+            color: #FFDD9F;
+            letter-spacing: 2px;
+            background: rgba(255,255,255,0.05);
+            padding: 4px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 221, 159, 0.3);
+        }
+        .copy-btn {
+            background: none;
+            border: none;
+            color: #FFDD9F;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-left: 8px;
+            font-family: 'Manrope', sans-serif;
+            padding: 4px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 221, 159, 0.3);
+        }
+        .copy-btn:hover { background: rgba(255, 221, 159, 0.15); color: #ffffff; }
+        .game-mode-badge {
+            font-family: 'Manrope', sans-serif;
+            background: rgba(255, 166, 0, 0.2);
+            border: 1px solid #FFA600;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #FFDD9F;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== СЕТКИ ===== */
+        .lobby-grid,
+        .game-grid {
+            display: grid;
+            gap: 25px;
+        }
+        .lobby-grid {
+            grid-template-columns: 1fr 350px;
+        }
+        .game-grid {
+            grid-template-columns: 280px 1fr;
+        }
+        @media (max-width: 768px) {
+            .lobby-grid, .game-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ===== КАРТОЧКИ ===== */
+        .players-card,
+        .chat-card,
+        .game-card {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 221, 159, 0.3);
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        .players-card h3,
+        .chat-card h3,
+        .game-card h3 {
+            font-family: 'Rubik Glitch', cursive;
+            font-size: 1.3rem;
+            color: #FFDD9F;
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+        }
+
+        /* ===== СПИСКИ ИГРОКОВ ===== */
+        .players-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+        }
+        .player-item,
+        .game-player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            transition: 0.2s;
+            font-size: 0.95rem;
+        }
+        .player-item:hover,
+        .game-player-item:hover {
+            background: rgba(255, 166, 0, 0.08);
+            border-radius: 8px;
+        }
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .player-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .player-status.ready,
+        .player-status.alive { background: #22c55e; }
+        .player-status.not-ready,
+        .player-status.eliminated { background: #ef4444; }
+
+        .player-host-badge {
+            font-family: 'Manrope', sans-serif;
+            background: rgba(255, 166, 0, 0.25);
+            color: #FFDD9F;
+            font-size: 0.65rem;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .kick-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            opacity: 0.6;
+        }
+        .kick-btn:hover { opacity: 1; transform: scale(1.1); }
+
+        .game-player-item {
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            margin-bottom: 4px;
+        }
+        .game-player-item.active {
+            border-color: #FFA600;
+            background: rgba(255, 166, 0, 0.15);
+        }
+        .game-player-item.eliminated {
+            opacity: 0.4;
+            text-decoration: line-through;
+            cursor: default;
+        }
+
+        /* ===== ГОТОВНОСТЬ ===== */
+        .ready-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .ready-section label {
+            font-size: 0.95rem;
+            color: #cccccc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .ready-section input[type="checkbox"] {
+            accent-color: #FFA600;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .ready-section span {
+            font-size: 0.9rem;
+            color: #aaaaaa;
+        }
+
+        /* ===== КНОПКИ ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 22px;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Rubik Glitch', cursive;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.25s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-decoration: none;
+            gap: 8px;
+            min-width: 120px;
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .btn-primary {
+            background: #ffffff;
+            color: #000000;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #FFA600;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 166, 0, 0.35);
+        }
+        .btn-secondary {
+            background: transparent;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #FFDD9F;
+        }
+        .start-game-btn,
+        .leave-btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* ===== ЧАТ ===== */
+        .chat-messages {
+            height: 350px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .chat-message {
+            padding: 6px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.9rem;
+            color: #dddddd;
+        }
+        .chat-message strong {
+            color: #FFDD9F;
+            font-weight: 600;
+        }
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.4);
+            color: #ffffff;
+            font-family: 'Manrope', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+            min-width: 0;
+        }
+        .chat-input-area input:focus {
+            border-color: #FFA600;
+            box-shadow: 0 0 12px rgba(255, 166, 0, 0.15);
+        }
+        .chat-input-area input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+        .chat-input-area .btn {
+            min-width: 100px;
+            padding: 12px 18px;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        @media (max-width: 500px) {
+            .chat-input-area .btn {
+                min-width: 70px;
+                padding: 10px 12px;
+                font-size: 0.7rem;
+            }
+        }
+
+        /* ===== ИГРОВЫЕ ЭЛЕМЕНТЫ ===== */
+        .attributes-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 18px;
+        }
+        .attribute-card {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            transition: 0.2s;
+        }
+        .attribute-card.hidden {
+            cursor: pointer;
+            border-style: dashed;
+            opacity: 0.7;
+        }
+        .attribute-card.hidden:hover {
+            border-color: #FFA600;
+            background: rgba(255, 166, 0, 0.08);
+            opacity: 1;
+        }
+        .attribute-card.revealed {
+            border-color: #86efac;
+            background: rgba(22, 163, 74, 0.12);
+        }
+        .attr-icon {
+            font-size: 1.8rem;
+            margin-bottom: 4px;
+        }
+        .attr-label {
+            font-size: 0.65rem;
+            color: #aaaaaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .attr-value {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #ffffff;
+            margin-top: 2px;
+        }
+
+        .game-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* ===== ГОЛОСОВАНИЕ ===== */
+        .voting-players {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .voting-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            transition: 0.2s;
+        }
+        .voting-card h4 {
+            font-family: 'Manrope', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        .voting-card p {
+            font-size: 0.85rem;
+            color: #aaaaaa;
+            margin-bottom: 12px;
+        }
+        .voting-card .btn {
+            min-width: 100%;
+        }
+
+        /* ===== РЕЗУЛЬТАТЫ ===== */
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 1rem;
+        }
+        .result-survivor {
+            color: #22c55e;
+            font-weight: 700;
+        }
+        .result-eliminated {
+            color: #ef4444;
+        }
+
+        /* ===== СКРЫТЫЕ ЭКРАНЫ ===== */
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+        }
+
+        /* ===== АДАПТИВ ===== */
+        @media (max-width: 600px) {
+            .room-header {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            .room-code {
+                font-size: 1.2rem;
+                display: inline-block;
+            }
+            .attributes-grid {
+                grid-template-columns: 1fr;
+            }
+            .voting-players {
+                grid-template-columns: 1fr;
+            }
+            .btn {
+                min-width: 100%;
+            }
+            .chat-input-area {
+                flex-direction: column;
+            }
+            .chat-input-area .btn {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="notification" id="notification"></div>
+
+<main class="room-container">
+    <!-- Шапка комнаты -->
+    <div class="room-header">
+        <div>
+            <span class="room-code" id="roomCodeDisplay">---</span>
+            <button class="copy-btn" id="copyCodeBtn">Копировать</button>
+        </div>
+        <div>
+            <span class="game-mode-badge" id="gameModeBadge">Загрузка...</span>
+        </div>
+    </div>
+
+    <!-- Экран лобби -->
+    <div id="lobbyScreen" class="screen active">
+        <div class="lobby-grid">
+            <div class="players-card">
+                <h3>Игроки (<span id="playersCount">0</span>)</h3>
+                <div class="players-list" id="playersList">
+                    <div class="player-item">Загрузка...</div>
+                </div>
+                <div class="ready-section">
+                    <label>
+                        <input type="checkbox" id="readyCheckbox"> Я готов
+                    </label>
+                    <span id="readyStats">Готовы: 0/0</span>
+                </div>
+                <button class="btn btn-primary start-game-btn" id="startGameBtn" disabled>Начать игру</button>
+                <button class="btn btn-secondary leave-btn" id="leaveRoomBtn">Выйти из комнаты</button>
+            </div>
+
+            <div class="chat-card">
+                <h3>Чат</h3>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message">Сообщений пока нет</div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="Введите сообщение...">
+                    <button class="btn btn-primary" id="sendChatBtn">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экран игры -->
+    <div id="gameScreen" class="screen">
+        <div class="game-grid">
+            <div class="players-card">
+                <h3>Игроки (<span id="gamePlayersCount">0</span>)</h3>
+                <div class="players-list" id="gamePlayersList"></div>
+                <div class="ready-section">
+                    <span id="gameRoundInfo">Раунд: 1</span>
+                    <span id="gameAliveInfo">Живых: 0</span>
+                </div>
+                <button class="btn btn-secondary leave-btn" id="gameLeaveBtn">Выйти из игры</button>
+            </div>
+
+            <div class="game-card">
+                <div id="currentPlayerCard">
+                    <p style="color: #888; text-align: center;">Выберите игрока слева</p>
+                </div>
+                <div class="game-actions" id="gameActions"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Экран голосования -->
+    <div id="votingScreen" class="screen">
+        <div class="players-card">
+            <h2>Голосование</h2>
+            <p>Раунд <span id="votingRound">1</span> — выбывает 1 человек</p>
+            <div id="votingPlayersList" class="voting-players"></div>
+            <button class="btn btn-primary" id="confirmVotesBtn">Подтвердить голосование</button>
+        </div>
+    </div>
+
+    <!-- Экран результатов -->
+    <div id="resultsScreen" class="screen">
+        <div class="players-card">
+            <h2>Игра завершена!</h2>
+            <div id="resultsList" class="results-list"></div>
+            <button class="btn btn-primary" id="playAgainBtn">Играть снова</button>
+            <button class="btn btn-secondary" id="backToLobbyBtn">Вернуться в лобби</button>
+        </div>
+    </div>
+</main>
+
+<script src="js/auth.js"></script>
+<script>
+// ==================== ROOM LOBBY + GAME ====================
+
+const ROOMS_API = "api/rooms.php";
+
+let currentRoom = {
+    code: '',
+    isHost: false,
+    username: '',
+    clientId: '',
+    members: [],
+    gameMode: 'classic',
+    chat: []
+};
+
+let gameState = {
+    phase: 'lobby', // lobby, game, voting, results
+    players: [],
+    currentPlayerIndex: 0,
+    round: 1,
+    bunkerCapacity: 0,
+    catastrophe: null,
+    eliminatedPlayers: [],
+    voteCounts: {}
+};
+
+let pollInterval = null;
+let joinCompleted = false;
+
+function $(id) { return document.getElementById(id); }
+
+function showNotification(msg, type = "info") {
+    const notif = $("notification");
+    if (!notif) return;
+    notif.textContent = msg;
+    notif.className = `notification ${type} show`;
+    clearTimeout(notif._timeout);
+    notif._timeout = setTimeout(() => notif.classList.remove("show"), 3000);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+}
+
+async function apiRequest(action, payload = {}) {
+    console.log(`[API] Request: ${action}`, payload);
+    const response = await fetch(ROOMS_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...payload })
+    });
+    const data = await response.json();
+    console.log(`[API] Response ${action}:`, data);
+    if (!data.ok) {
+        throw new Error(data.error || "Ошибка запроса");
+    }
+    return data;
+}
+
+async function cleanupOldConnections(roomCode, username) {
+    try {
+        console.log(`[cleanup] Проверяем комнату ${roomCode} на наличие старых подключений ${username}`);
+        
+        const response = await fetch(ROOMS_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "getRoomState", roomCode: roomCode })
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok && data.room && data.room.members) {
+            const oldMembers = data.room.members.filter(m => 
+                m.username && m.username.toLowerCase() === username.toLowerCase()
+            );
+            
+            if (oldMembers.length > 0) {
+                console.log(`[cleanup] Найдено ${oldMembers.length} старых подключений, удаляем...`);
+                for (const oldMember of oldMembers) {
+                    try {
+                        await fetch(ROOMS_API, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "leave", roomCode: roomCode, clientId: oldMember.clientId })
+                        });
+                    } catch (e) {}
+                }
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+    } catch (error) {
+        console.warn("[cleanup] Ошибка:", error);
+    }
+}
+
+async function pollRoom() {
+    if (!currentRoom.clientId || !currentRoom.code) return;
+    
+    try {
+        const data = await apiRequest("poll", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId
+        });
+        
+        if (data.room) {
+            updateRoomData(data.room);
+        }
+    } catch (error) {
+        console.error("Poll error:", error);
+        if (error.message.includes("не состоит")) {
+            showNotification("Вы были отключены от комнаты", "warning");
+            stopPolling();
+            setTimeout(() => { window.location.href = "lobbies.html"; }, 2000);
+        }
+    }
+}
+
+function startPolling() {
+    stopPolling();
+    pollInterval = setInterval(pollRoom, 2000);
+}
+
+function stopPolling() {
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+}
+
+function updateRoomData(roomData) {
+    console.log("[updateRoomData] Получены данные:", roomData);
+    
+    currentRoom.code = roomData.code || currentRoom.code;
+    currentRoom.gameMode = roomData.gameMode || 'classic';
+    currentRoom.members = roomData.members || [];
+    currentRoom.chat = roomData.chat || [];
+    
+    const currentMember = currentRoom.members.find(m => m.clientId === currentRoom.clientId);
+    currentRoom.isHost = currentMember?.isHost || false;
+    
+    // Проверяем, началась ли игра
+    if (roomData.game && roomData.game.phase && roomData.game.phase !== 'setup') {
+        gameState.phase = roomData.game.phase;
+        gameState.players = roomData.game.players || [];
+        gameState.round = roomData.game.round || 1;
+        gameState.bunkerCapacity = roomData.game.bunkerCapacity || 0;
+        gameState.currentPlayerIndex = roomData.game.currentPlayerIndex || 0;
+        
+        showGameScreen();
+    } else {
+        renderPlayersList();
+        renderChat();
+        updateReadyUI();
+    }
+    
+    const modeBadge = $("gameModeBadge");
+    if (modeBadge) {
+        modeBadge.textContent = currentRoom.gameMode === 'classic' ? "Классический" : "Не классика";
+    }
+}
+
+function showGameScreen() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    
+    if (gameState.phase === 'game') {
+        $("gameScreen").classList.add('active');
+        renderGameUI();
+    } else if (gameState.phase === 'voting') {
+        $("votingScreen").classList.add('active');
+        renderVotingUI();
+    } else if (gameState.phase === 'results') {
+        $("resultsScreen").classList.add('active');
+        renderResultsUI();
+    } else {
+        $("lobbyScreen").classList.add('active');
+    }
+}
+
+function renderPlayersList() {
+    const container = $("playersList");
+    const playersCountSpan = $("playersCount");
+    
+    if (!container) return;
+    
+    playersCountSpan.textContent = currentRoom.members.length;
+    
+    if (currentRoom.members.length === 0) {
+        container.innerHTML = '<div class="player-item">Нет игроков</div>';
+        return;
+    }
+    
+    container.innerHTML = currentRoom.members.map(member => {
+        const isCurrentUser = member.clientId === currentRoom.clientId;
+        const showKickButton = currentRoom.isHost && !member.isHost && !isCurrentUser;
+        
+        return `
+            <div class="player-item">
+                <div class="player-info">
+                    <div class="player-status ${member.ready ? 'ready' : 'not-ready'}"></div>
+                    <span>${escapeHtml(member.username)}</span>
+                    ${member.isHost ? '<span class="player-host-badge">Хост</span>' : ''}
+                    ${isCurrentUser ? '<span style="font-size:0.7rem; color:#888;"> (Вы)</span>' : ''}
+                </div>
+                ${showKickButton ? `<button class="kick-btn" data-client-id="${member.clientId}">✕</button>` : ''}
+            </div>
+        `;
+    }).join("");
+    
+    document.querySelectorAll(".kick-btn").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+            const clientId = btn.dataset.clientId;
+            if (confirm("Выгнать игрока?")) {
+                await kickPlayer(clientId);
+            }
+        });
+    });
+}
+
+async function kickPlayer(clientId) {
+    try {
+        await apiRequest("gameAction", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId,
+            type: "kickPlayer",
+            payload: { targetClientId: clientId }
+        });
+        showNotification("Игрок выгнан", "success");
+    } catch (error) {
+        showNotification(error.message, "error");
+    }
+}
+
+function renderChat() {
+    const container = $("chatMessages");
+    if (!container) return;
+    
+    if (!currentRoom.chat || currentRoom.chat.length === 0) {
+        container.innerHTML = '<div class="chat-message">Сообщений пока нет</div>';
+        return;
+    }
+    
+    container.innerHTML = currentRoom.chat.map(msg => `
+        <div class="chat-message">
+            <strong>${escapeHtml(msg.username)}</strong>: ${escapeHtml(msg.message)}
+        </div>
+    `).join("");
+    
+    container.scrollTop = container.scrollHeight;
+}
+
+async function sendMessage() {
+    const input = $("chatInput");
+    const message = input.value.trim();
+    if (!message) return;
+    
+    try {
+        await apiRequest("gameAction", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId,
+            type: "sendMessage",
+            payload: { message: message }
+        });
+        input.value = "";
+    } catch (error) {
+        showNotification(error.message, "error");
+    }
+}
+
+async function toggleReady() {
+    const checkbox = $("readyCheckbox");
+    const isReady = checkbox.checked;
+    
+    try {
+        await apiRequest("setReady", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId,
+            ready: isReady
+        });
+    } catch (error) {
+        showNotification(error.message, "error");
+        checkbox.checked = !isReady;
+    }
+}
+
+function updateReadyUI() {
+    const checkbox = $("readyCheckbox");
+    const readyStats = $("readyStats");
+    const startBtn = $("startGameBtn");
+    
+    if (!checkbox || !readyStats) return;
+    
+    const currentMember = currentRoom.members.find(m => m.clientId === currentRoom.clientId);
+    if (currentMember) {
+        checkbox.checked = currentMember.ready || false;
+    }
+    
+    const readyCount = currentRoom.members.filter(m => m.ready).length;
+    const totalCount = currentRoom.members.length;
+    readyStats.textContent = `Готовы: ${readyCount}/${totalCount}`;
+    
+    if (startBtn) {
+        if (!currentRoom.isHost) {
+            startBtn.disabled = true;
+            startBtn.textContent = "Начать игру (только хост)";
+        } else {
+            const allReady = totalCount >= 2 && currentRoom.members.every(m => m.ready);
+            startBtn.disabled = !allReady;
+            startBtn.textContent = allReady ? "Начать игру" : "Ждём готовности...";
+        }
+    }
+}
+
+async function startGame() {
+    if (!currentRoom.isHost) {
+        showNotification("Только хост может начать игру", "warning");
+        return;
+    }
+    
+    const allReady = currentRoom.members.length >= 2 && currentRoom.members.every(m => m.ready);
+    if (!allReady) {
+        showNotification("Не все игроки готовы", "warning");
+        return;
+    }
+    
+    const playerNames = currentRoom.members.map(m => m.username);
+    const bunkerCapacity = playerNames.length === 3 ? 1 : Math.ceil(playerNames.length / 2);
+    
+    // Создаём игроков со стартовыми карточками
+    const players = playerNames.map(name => ({
+        playerName: name,
+        isEliminated: false,
+        revealed: {
+            profession: false,
+            health: false,
+            hobby: false,
+            luggage: false,
+            phobiaFact: false,
+            actionCard: false
+        },
+        profession: { name: "Профессия", description: "Будет назначена" },
+        health: { name: "Здоровье", description: "Будет назначено" },
+        hobby: { name: "Хобби", description: "Будет назначено" },
+        luggage: { name: "Багаж", description: "Будет назначен" },
+        phobiaFact: { name: "Факт/Фобия", description: "Будет назначен" },
+        actionCard: { name: "Карта действия", description: "Будет назначена", icon: "🎴" }
+    }));
+    
+    const gameData = {
+        phase: "game",
+        players: players,
+        round: 1,
+        bunkerCapacity: bunkerCapacity,
+        startedAt: Date.now(),
+        currentPlayerIndex: 0,
+        turnRevealed: false,
+        roundPlayedPlayers: {},
+        revealsThisRound: {},
+        voteCounts: {},
+        voterChoices: {},
+        tieCandidates: [],
+        eliminatedPlayers: []
+    };
+    
+    try {
+        await apiRequest("startGame", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId,
+            game: gameData
+        });
+        showNotification("Игра начинается!", "success");
+    } catch (error) {
+        showNotification(error.message, "error");
+    }
+}
+
+function renderGameUI() {
+    const playersList = $("gamePlayersList");
+    const playersCount = $("gamePlayersCount");
+    const roundInfo = $("gameRoundInfo");
+    const aliveInfo = $("gameAliveInfo");
+    
+    if (!playersList) return;
+    
+    const aliveCount = gameState.players.filter(p => !p.isEliminated).length;
+    playersCount.textContent = gameState.players.length;
+    roundInfo.textContent = `Раунд: ${gameState.round}`;
+    aliveInfo.textContent = `Живых: ${aliveCount}`;
+    
+    playersList.innerHTML = gameState.players.map((player, idx) => `
+        <div class="game-player-item ${idx === gameState.currentPlayerIndex ? 'active' : ''} ${player.isEliminated ? 'eliminated' : ''}" data-index="${idx}">
+            <div class="player-status ${player.isEliminated ? 'eliminated' : 'alive'}"></div>
+            <span>${escapeHtml(player.playerName)}</span>
+        </div>
+    `).join("");
+    
+    document.querySelectorAll(".game-player-item").forEach(el => {
+        el.addEventListener("click", () => {
+            const idx = parseInt(el.dataset.index);
+            if (!gameState.players[idx].isEliminated) {
+                gameState.currentPlayerIndex = idx;
+                renderCurrentPlayerCard();
+                renderGameUI(); // Обновляем активный класс
+            }
+        });
+    });
+    
+    renderCurrentPlayerCard();
+}
+
+function renderCurrentPlayerCard() {
+    const container = $("currentPlayerCard");
+    const actions = $("gameActions");
+    
+    if (!container) return;
+    
+    const player = gameState.players[gameState.currentPlayerIndex];
+    if (!player) return;
+    
+    const isCurrentTurn = player.playerName === currentRoom.username && !player.isEliminated;
+    
+    const attrs = [
+        { key: "profession", icon: "💼", label: "Профессия", value: player.profession?.name || "???" },
+        { key: "health", icon: "❤️", label: "Здоровье", value: player.health?.name || "???" },
+        { key: "hobby", icon: "🎯", label: "Хобби", value: player.hobby?.name || "???" },
+        { key: "luggage", icon: "🎒", label: "Багаж", value: player.luggage?.name || "???" },
+        { key: "phobiaFact", icon: "🔮", label: "Факт/Фобия", value: player.phobiaFact?.name || "???" },
+        { key: "actionCard", icon: "🎴", label: "Карта действия", value: player.actionCard?.name || "???" }
+    ];
+    
+    container.innerHTML = `
+        <h3 style="font-family: 'Rubik Glitch', cursive; color: #FFDD9F; margin-bottom: 8px;">${escapeHtml(player.playerName)}</h3>
+        <div class="attributes-grid">
+            ${attrs.map(attr => `
+                <div class="attribute-card ${player.revealed[attr.key] ? 'revealed' : 'hidden'}">
+                    <div class="attr-icon">${attr.icon}</div>
+                    <div class="attr-label">${attr.label}</div>
+                    <div class="attr-value">${player.revealed[attr.key] ? escapeHtml(attr.value) : "???"}</div>
+                </div>
+            `).join("")}
+        </div>
+    `;
+    
+    // Добавляем обработчики для скрытых атрибутов (только если это ход текущего игрока)
+    if (isCurrentTurn && gameState.phase === 'game') {
+        document.querySelectorAll(".attribute-card.hidden").forEach((card, idx) => {
+            card.style.cursor = "pointer";
+            card.addEventListener("click", async () => {
+                const key = attrs[idx].key;
+                if (gameState.round === 1 && key !== 'profession') {
+                    showNotification("В 1-м раунде можно раскрыть только профессию", "warning");
+                    return;
+                }
+                await revealAttribute(key);
+            });
+        });
+    }
+    
+    if (isCurrentTurn && gameState.phase === 'game') {
+        actions.innerHTML = `<button class="btn btn-primary" id="endTurnBtn">Завершить ход</button>`;
+        $("endTurnBtn")?.addEventListener("click", endTurn);
+    } else {
+        actions.innerHTML = "";
+    }
+}
+
+async function revealAttribute(key) {
+    try {
+        await apiRequest("gameAction", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId,
+            type: "revealAttribute",
+            payload: { key: key }
+        });
+        showNotification(`Атрибут "${key}" раскрыт!`, "success");
+    } catch (error) {
+        showNotification(error.message, "error");
+    }
+}
+
+async function endTurn() {
+    try {
+        await apiRequest("gameAction", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId,
+            type: "nextPlayer",
+            payload: {}
+        });
+    } catch (error) {
+        showNotification(error.message, "error");
+    }
+}
+
+function renderVotingUI() {
+    const container = $("votingPlayersList");
+    const roundSpan = $("votingRound");
+    
+    if (!container) return;
+    
+    roundSpan.textContent = gameState.round;
+    
+    const alivePlayers = gameState.players.filter(p => !p.isEliminated);
+    
+    container.innerHTML = alivePlayers.map(player => `
+        <div class="voting-card" data-name="${escapeHtml(player.playerName)}">
+            <h4>${escapeHtml(player.playerName)}</h4>
+            <p>${player.profession?.name || "???"}</p>
+            <button class="btn btn-secondary vote-btn" data-name="${escapeHtml(player.playerName)}">Голосовать</button>
+        </div>
+    `).join("");
+    
+    document.querySelectorAll(".vote-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+            const targetName = btn.dataset.name;
+            await castVote(targetName);
+        });
+    });
+    
+    $("confirmVotesBtn")?.addEventListener("click", confirmVotes);
+}
+
+async function castVote(targetName) {
+    try {
+        await apiRequest("gameAction", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId,
+            type: "castVote",
+            payload: { targetName: targetName }
+        });
+        showNotification(`Голос за ${targetName} отдан`, "success");
+    } catch (error) {
+        showNotification(error.message, "error");
+    }
+}
+
+async function confirmVotes() {
+    // В онлайн-режиме голосование завершается автоматически
+    showNotification("Голосование завершено", "info");
+}
+
+function renderResultsUI() {
+    const container = $("resultsList");
+    if (!container) return;
+    
+    const survivors = gameState.players.filter(p => !p.isEliminated);
+    const eliminated = gameState.players.filter(p => p.isEliminated);
+    
+    container.innerHTML = `
+        <h3 style="font-family: 'Rubik Glitch', cursive; color: #FFDD9F; margin: 12px 0 6px;">Выжившие (попали в бункер)</h3>
+        ${survivors.map(p => `<div class="result-item result-survivor">${escapeHtml(p.playerName)}</div>`).join("")}
+        <h3 style="font-family: 'Rubik Glitch', cursive; color: #FFDD9F; margin: 12px 0 6px;">Не попали в бункер</h3>
+        ${eliminated.map(p => `<div class="result-item result-eliminated">${escapeHtml(p.playerName)}</div>`).join("")}
+    `;
+    
+    $("playAgainBtn")?.addEventListener("click", resetGame);
+    $("backToLobbyBtn")?.addEventListener("click", () => window.location.href = "lobbies.html");
+}
+
+async function resetGame() {
+    try {
+        await apiRequest("gameAction", {
+            roomCode: currentRoom.code,
+            clientId: currentRoom.clientId,
+            type: "resetGame",
+            payload: {}
+        });
+        window.location.reload();
+    } catch (error) {
+        showNotification(error.message, "error");
+    }
+}
+
+async function leaveRoom() {
+    if (confirm("Выйти из комнаты?")) {
+        stopPolling();
+        try {
+            await apiRequest("leave", { roomCode: currentRoom.code, clientId: currentRoom.clientId });
+        } catch (e) {}
+        window.location.href = "lobbies.html";
+    }
+}
+
+function copyRoomCode() {
+    if (currentRoom.code) {
+        navigator.clipboard.writeText(currentRoom.code);
+        showNotification("Код скопирован!", "success");
+    }
+}
+
+async function initRoom() {
+    if (joinCompleted) return;
+    
+    const roomCode = getQueryParam("room");
+    const username = getQueryParam("name");
+    
+    if (!roomCode || !username) {
+        showNotification("Неверная ссылка на комнату", "error");
+        setTimeout(() => { window.location.href = "lobbies.html"; }, 2000);
+        return;
+    }
+    
+    currentRoom.username = decodeURIComponent(username);
+    currentRoom.code = roomCode;
+    
+    $("roomCodeDisplay").textContent = roomCode;
+    
+    try {
+        await cleanupOldConnections(roomCode, currentRoom.username);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const data = await apiRequest("join", {
+            roomCode: roomCode,
+            username: currentRoom.username
+        });
+        
+        currentRoom.clientId = data.clientId;
+        currentRoom.username = data.username || currentRoom.username;
+        joinCompleted = true;
+        
+        if (data.room) {
+            updateRoomData(data.room);
+        }
+        
+        startPolling();
+        showNotification(`Вы вошли в комнату ${roomCode}`, "success");
+    } catch (error) {
+        console.error("[initRoom] Ошибка:", error);
+        showNotification(error.message, "error");
+        setTimeout(() => { window.location.href = "lobbies.html"; }, 2000);
+    }
+}
+
+function bindEvents() {
+    $("sendChatBtn")?.addEventListener("click", sendMessage);
+    $("chatInput")?.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
+    $("readyCheckbox")?.addEventListener("change", toggleReady);
+    $("startGameBtn")?.addEventListener("click", startGame);
+    $("leaveRoomBtn")?.addEventListener("click", leaveRoom);
+    $("gameLeaveBtn")?.addEventListener("click", leaveRoom);
+    $("copyCodeBtn")?.addEventListener("click", copyRoomCode);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    bindEvents();
+    initRoom();
+});
+</script>
+</body>
+</html>

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-const ROOM_TTL_SECONDS = 40;
+const ROOM_TTL_SECONDS = 10;
 const ROOM_CODE_LENGTH = 6;
 const MAX_PLAYERS = 12;
+const DEFAULT_GAME_MODE = 'classic';
+const ALLOWED_GAME_MODES = ['classic', 'nonclassic'];
 
 $dataDir = __DIR__ . '/data/rooms';
 if (!is_dir($dataDir)) {
@@ -97,6 +99,87 @@ function roomFilePath(string $dataDir, string $roomCode): string
     return $dataDir . '/' . $roomCode . '.json';
 }
 
+function roomStatus(array $room): array
+{
+    $game = isset($room['game']) && is_array($room['game']) ? $room['game'] : null;
+    $phase = (string) ($game['phase'] ?? 'setup');
+    $started = $game !== null && $phase !== '' && $phase !== 'setup';
+
+    return [
+        'phase' => $phase,
+        'started' => $started,
+        'label' => $started ? 'Игра идёт' : 'В лобби',
+        'joinable' => !$started,
+    ];
+}
+
+function roomSummary(array $room): array
+{
+    $members = array_values($room['members'] ?? []);
+    $players = array_values($room['players'] ?? []);
+    $status = roomStatus($room);
+
+    return [
+        'code' => (string) ($room['code'] ?? ''),
+        'version' => (int) ($room['version'] ?? 0),
+        'playersCount' => count($players),
+        'membersCount' => count($members),
+        'capacity' => MAX_PLAYERS,
+        'private' => !empty($room['private']),
+        'gameMode' => $room['gameMode'] ?? DEFAULT_GAME_MODE,
+        'status' => $status['label'],
+        'phase' => $status['phase'],
+        'started' => $status['started'],
+        'joinable' => $status['joinable'] && count($members) < MAX_PLAYERS,
+        'updatedAt' => (int) ($room['updatedAt'] ?? 0),
+    ];
+}
+
+function loadRoomsSummary(string $dataDir): array
+{
+    $rooms = [];
+    foreach (glob($dataDir . '/*.json') ?: [] as $filePath) {
+        $contents = @file_get_contents($filePath);
+        if ($contents === false || trim($contents) === '') {
+            continue;
+        }
+
+        $room = json_decode($contents, true);
+        if (!is_array($room)) {
+            continue;
+        }
+
+        $changed = cleanupInactiveMembers($room);
+        $playersChanged = syncPlayersFromMembers($room);
+        $changed = $changed || $playersChanged;
+
+        if (empty($room['members'])) {
+            @unlink($filePath);
+            continue;
+        }
+
+        if ($changed) {
+            $room['version'] = (int) ($room['version'] ?? 0) + 1;
+            $room['updatedAt'] = time();
+            @file_put_contents(
+                $filePath,
+                json_encode($room, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+            );
+        }
+
+        $rooms[] = roomSummary($room);
+    }
+
+    usort($rooms, static function (array $left, array $right): int {
+        if ($left['started'] !== $right['started']) {
+            return $left['started'] <=> $right['started'];
+        }
+        return $right['updatedAt'] <=> $left['updatedAt'];
+    });
+
+    return $rooms;
+}
+
 function withRoomLock(string $filePath, callable $handler)
 {
     $handle = fopen($filePath, 'c+');
@@ -148,7 +231,7 @@ function cleanupInactiveMembers(array &$room): bool
         }
     }
 
-    if (!$hasHost) {
+    if (!$hasHost && !empty($room['members'])) {
         $room['hostId'] = $room['members'][0]['clientId'] ?? '';
         $changed = true;
     }
@@ -229,6 +312,22 @@ function syncPlayersFromMembers(array &$room): bool
 
     $room['players'] = $nextPlayers;
     return $nextPlayers !== $currentPlayers;
+}
+
+function areAllMembersReady(array $room): bool
+{
+    $members = $room['members'] ?? [];
+    if (!is_array($members) || count($members) === 0) {
+        return false;
+    }
+
+    foreach ($members as $member) {
+        if (empty($member['ready'])) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 function getAliveIndexes(array $players): array
@@ -345,7 +444,6 @@ function beginRoundInGame(array &$game): void
         return;
     }
 
-    // В 1-м раунде профессия должна быть открыта у всех сразу.
     if ((int) ($game['round'] ?? 1) === 1) {
         foreach (($game['players'] ?? []) as $idx => $player) {
             if (!empty($player['isEliminated'])) {
@@ -485,6 +583,70 @@ function applyGameAction(array &$room, string $clientId, string $type, array $pa
 
         $room['game'] = null;
         syncPlayersFromMembers($room);
+        return null;
+    }
+
+    if ($type === 'kickPlayer') {
+        if ((string) ($room['hostId'] ?? '') !== $clientId) {
+            return 'Только хост может выгнать игрока';
+        }
+
+        $targetClientId = (string) ($payload['targetClientId'] ?? '');
+        if ($targetClientId === '') {
+            return 'Не указан игрок для выгона';
+        }
+
+        if ($targetClientId === $clientId) {
+            return 'Нельзя выгнать самого себя';
+        }
+
+        $targetIndex = null;
+        foreach ($room['members'] as $idx => $member) {
+            if ((string) ($member['clientId'] ?? '') === $targetClientId) {
+                $targetIndex = $idx;
+                break;
+            }
+        }
+
+        if ($targetIndex === null) {
+            return 'Игрок не найден в комнате';
+        }
+
+        array_splice($room['members'], $targetIndex, 1);
+        syncPlayersFromMembers($room);
+
+        if (empty($room['members'])) {
+            return 'room_empty';
+        }
+
+        return null;
+    }
+
+    if ($type === 'sendMessage') {
+        $member = getMemberByClientId($room, $clientId);
+        if ($member === null) {
+            return 'Клиент не состоит в комнате';
+        }
+
+        $message = trim((string) ($payload['message'] ?? ''));
+        if ($message === '') {
+            return null;
+        }
+
+        if (!isset($room['chat']) || !is_array($room['chat'])) {
+            $room['chat'] = [];
+        }
+
+        $room['chat'][] = [
+            'timestamp' => time(),
+            'username' => (string) ($member['username'] ?? ''),
+            'message' => utf8Substr($message, 0, 200),
+        ];
+
+        if (count($room['chat']) > 100) {
+            $room['chat'] = array_slice($room['chat'], -100);
+        }
+
         return null;
     }
 
@@ -673,15 +835,19 @@ function roomPayload(array $room): array
             'clientId' => (string) ($member['clientId'] ?? ''),
             'username' => (string) ($member['username'] ?? ''),
             'isHost' => (string) ($member['clientId'] ?? '') === $hostId,
+            'ready' => !empty($member['ready']),
         ];
     }
 
     return [
         'code' => (string) ($room['code'] ?? ''),
         'version' => (int) ($room['version'] ?? 0),
+        'private' => !empty($room['private']),
+        'gameMode' => $room['gameMode'] ?? DEFAULT_GAME_MODE,
         'players' => array_values($room['players'] ?? []),
         'members' => $members,
         'game' => isset($room['game']) && is_array($room['game']) ? $room['game'] : null,
+        'chat' => $room['chat'] ?? [],
     ];
 }
 
@@ -699,8 +865,16 @@ $action = (string) ($body['action'] ?? '');
 
 if ($action === 'create') {
     $username = sanitizeUsername((string) ($body['username'] ?? ''));
+    $gameMode = (string) ($body['gameMode'] ?? DEFAULT_GAME_MODE);
+    $isPrivate = !empty($body['private']);
+    $password = (string) ($body['password'] ?? '');
+
     if ($username === '') {
         respond(['ok' => false, 'error' => 'Имя пользователя не задано'], 422);
+    }
+
+    if (!in_array($gameMode, ALLOWED_GAME_MODES, true)) {
+        $gameMode = DEFAULT_GAME_MODE;
     }
 
     $roomCode = '';
@@ -726,14 +900,23 @@ if ($action === 'create') {
         'hostId' => $clientId,
         'players' => [$username],
         'game' => null,
+        'chat' => [],
+        'private' => $isPrivate,
+        'gameMode' => $gameMode,
         'members' => [
             [
                 'clientId' => $clientId,
                 'username' => $username,
                 'lastSeen' => $now,
+                'ready' => false,
             ],
         ],
     ];
+
+    if ($isPrivate && $password !== '') {
+        $room['passwordHash'] = hash('sha256', $password);
+    }
+
     syncPlayersFromMembers($room);
 
     $filePath = roomFilePath($dataDir, $roomCode);
@@ -745,8 +928,21 @@ if ($action === 'create') {
     respond([
         'ok' => true,
         'clientId' => $clientId,
+        'roomCode' => $roomCode,
         'room' => roomPayload($room),
     ]);
+}
+
+if ($action === 'list') {
+    respond([
+        'ok' => true,
+        'rooms' => loadRoomsSummary($dataDir),
+    ]);
+}
+
+$roomActions = ['join', 'poll', 'setReady', 'updatePlayers', 'startGame', 'gameAction', 'leave'];
+if (!in_array($action, $roomActions, true)) {
+    respond(['ok' => false, 'error' => 'Неизвестное действие'], 422);
 }
 
 $roomCode = sanitizeRoomCode((string) ($body['roomCode'] ?? ''));
@@ -766,8 +962,19 @@ if ($action === 'join') {
     }
 
     $clientId = makeClientId();
-    $result = withRoomLock($filePath, static function (array $room, $handle) use ($roomCode, $username, $clientId) {
+    $result = withRoomLock($filePath, static function (array $room, $handle) use ($roomCode, $username, $clientId, $body) {
         cleanupInactiveMembers($room);
+
+        // Удаляем старые записи этого же пользователя
+        $room['members'] = array_values(array_filter($room['members'] ?? [], static function ($member) use ($username) {
+            return strcasecmp((string) ($member['username'] ?? ''), $username) !== 0;
+        }));
+
+        $game = $room['game'] ?? null;
+        $phase = is_array($game) ? (string) ($game['phase'] ?? 'setup') : 'setup';
+        if ($game !== null && $phase !== '' && $phase !== 'setup') {
+            respond(['ok' => false, 'error' => 'Игра уже началась!'], 409);
+        }
 
         $room['code'] = $roomCode;
         $room['version'] = (int) ($room['version'] ?? 0);
@@ -778,11 +985,20 @@ if ($action === 'join') {
             respond(['ok' => false, 'error' => 'Комната заполнена'], 409);
         }
 
+        if (!empty($room['private'])) {
+            $providedPassword = (string) ($body['password'] ?? '');
+            $expectedHash = $room['passwordHash'] ?? '';
+            if ($expectedHash === '' || hash('sha256', $providedPassword) !== $expectedHash) {
+                respond(['ok' => false, 'error' => 'Неверный пароль комнаты'], 403);
+            }
+        }
+
         $finalUsername = makeUniqueUsername($username, $room['members']);
         $room['members'][] = [
             'clientId' => $clientId,
             'username' => $finalUsername,
             'lastSeen' => time(),
+            'ready' => false,
         ];
         syncPlayersFromMembers($room);
 
@@ -836,6 +1052,46 @@ if ($action === 'poll') {
     respond($result);
 }
 
+if ($action === 'setReady') {
+    $clientId = (string) ($body['clientId'] ?? '');
+    $ready = !empty($body['ready']);
+
+    if ($clientId === '') {
+        respond(['ok' => false, 'error' => 'clientId обязателен'], 422);
+    }
+
+    $result = withRoomLock($filePath, static function (array $room, $handle) use ($clientId, $ready) {
+        cleanupInactiveMembers($room);
+
+        $updated = false;
+        foreach ($room['members'] as &$member) {
+            if ((string) ($member['clientId'] ?? '') === $clientId) {
+                $member['ready'] = $ready;
+                $updated = true;
+                break;
+            }
+        }
+
+        if (!$updated) {
+            respond(['ok' => false, 'error' => 'Клиент не состоит в комнате'], 403);
+        }
+
+        $room['version'] = (int) ($room['version'] ?? 0) + 1;
+        $room['updatedAt'] = time();
+
+        rewind($handle);
+        ftruncate($handle, 0);
+        fwrite($handle, json_encode($room, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+
+        return [
+            'ok' => true,
+            'room' => roomPayload($room),
+        ];
+    });
+
+    respond($result);
+}
+
 if ($action === 'updatePlayers') {
     respond([
         'ok' => false,
@@ -866,6 +1122,11 @@ if ($action === 'startGame') {
         $players = $game['players'] ?? [];
         if (!is_array($players) || count($players) < 2) {
             respond(['ok' => false, 'error' => 'Недостаточно игроков для старта'], 422);
+        }
+
+        // ★★★ ПРОВЕРКА ЧТО ВСЕ ГОТОВЫ ★★★
+        if (!areAllMembersReady($room)) {
+            respond(['ok' => false, 'error' => 'Не все игроки готовы'], 409);
         }
 
         $room['game'] = $game;
@@ -905,6 +1166,15 @@ if ($action === 'gameAction') {
         }
 
         $error = applyGameAction($room, $clientId, $type, $payload);
+        
+        if ($error === 'room_empty') {
+            return [
+                'ok' => true,
+                'deleteRoom' => true,
+                'roomCode' => (string) ($room['code'] ?? ''),
+            ];
+        }
+        
         if ($error !== null) {
             return [
                 'ok' => false,
@@ -925,6 +1195,11 @@ if ($action === 'gameAction') {
             'room' => roomPayload($room),
         ];
     });
+
+    if (!empty($result['deleteRoom'])) {
+        @unlink($filePath);
+        respond(['ok' => true, 'deleted' => true]);
+    }
 
     respond($result, !empty($result['ok']) ? 200 : 409);
 }

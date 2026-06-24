@@ -2,47 +2,200 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Бункер — Браузерная игра</title>
-  <meta name="description" content="Бета-версия браузерной социальной игры Бункер. Апокалипсис уже здесь — кто попадёт в бункер?" />
-  <link rel="stylesheet" href="css/style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Бункер — Игра</title>
+  <meta name="description" content="Игровой процесс браузерной социальной игры Бункер" />
+  <link rel="stylesheet" href="css/style.css?v=3" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50' y='65' text-anchor='middle' font-size='60' font-family='Arial' font-weight='700'>B</text></svg>" />
+  <style>
+    /* Дополнительные стили для игрового процесса */
+    .game-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    @media (max-width: 700px) {
+      .game-layout { grid-template-columns: 1fr; }
+    }
+    .sidebar {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .sidebar-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+    .player-card-main {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .attributes-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+    @media (max-width: 600px) {
+      .attributes-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 400px) {
+      .attributes-grid { grid-template-columns: 1fr; }
+    }
+    .attribute-card {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      text-align: center;
+      transition: var(--transition);
+    }
+    .attribute-card.hidden {
+      cursor: pointer;
+      border-style: dashed;
+      opacity: 0.7;
+    }
+    .attribute-card.hidden:hover {
+      border-color: var(--accent);
+      opacity: 1;
+      background: #eff6ff;
+    }
+    .attribute-card.revealed {
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+    .attr-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+    .attr-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem; }
+    .attr-value { font-size: 0.88rem; font-weight: 600; color: var(--text-primary); word-break: break-word; }
+    .game-actions-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      margin-top: 1rem;
+    }
+    .mini-player-card {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-dark);
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: 0.4rem;
+    }
+    .mini-player-card.active {
+      border-color: var(--accent);
+      background: #e8effc;
+    }
+    .mini-player-card.eliminated {
+      opacity: 0.4;
+      cursor: default;
+      text-decoration: line-through;
+    }
+    .game-meta {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .meta-badge {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .meta-badge span { color: var(--accent); margin-left: 4px; }
+    .btn-lg { padding: 0.9rem 2rem; font-size: 1rem; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .catastrophe-screen { text-align: center; }
+    .catastrophe-icon-big { font-size: 4rem; margin-bottom: 1rem; }
+    .catastrophe-title { font-size: 1.8rem; margin-bottom: 1rem; }
+    .bunker-info-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+    .voting-players {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    .voting-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      text-align: center;
+    }
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .result-item {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .result-survivor { color: #059669; font-weight: bold; }
+    .result-eliminated { color: #dc2626; }
+  </style>
 </head>
 <body>
 
-<!-- ============ NOTIFICATION ============ -->
 <div class="notification" id="notification"></div>
 
 <!-- ============ AUTH OVERLAY ============ -->
 <div class="auth-overlay" id="auth-overlay">
-  <div class="auth-card">
-    <h2>Авторизация</h2>
-    <p class="auth-subtitle">Войдите или создайте аккаунт, чтобы начать игру</p>
-
+  <div class="auth-layout">
+    <button type="button" class="auth-close-btn" id="btn-auth-close">×</button>
     <div class="auth-grid">
-      <form id="login-form" class="auth-form" autocomplete="on">
+      <section class="auth-panel" id="auth-panel-login">
         <h3>Вход</h3>
-        <label for="login-username">Логин</label>
-        <input type="text" id="login-username" maxlength="30" required />
-        <label for="login-password">Пароль</label>
-        <input type="password" id="login-password" maxlength="50" required />
-        <button type="submit" class="btn btn-primary">Войти</button>
-      </form>
-
-      <form id="register-form" class="auth-form" autocomplete="on">
+        <form id="login-form" class="auth-form">
+          <label for="login-username">Логин</label>
+          <input type="text" id="login-username" maxlength="30" required />
+          <label for="login-password">Пароль</label>
+          <input type="password" id="login-password" maxlength="50" required />
+          <button type="submit" class="btn btn-primary">Войти</button>
+          <button type="button" class="btn btn-secondary auth-switch-btn" id="btn-show-register">Регистрация</button>
+        </form>
+      </section>
+      <section class="auth-panel" id="auth-panel-register" style="display:none;">
         <h3>Регистрация</h3>
-        <label for="register-username">Логин</label>
-        <input type="text" id="register-username" maxlength="30" required />
-        <label for="register-password">Пароль</label>
-        <input type="password" id="register-password" maxlength="50" required />
-        <label for="register-role">Роль</label>
-        <select id="register-role" required>
-          <option value="player">Игрок</option>
-          <option value="host">Ведущий</option>
-          <option value="admin">Администратор</option>
-        </select>
-        <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
-      </form>
+        <form id="register-form" class="auth-form">
+          <label for="register-username">Логин</label>
+          <input type="text" id="register-username" maxlength="30" required />
+          <label for="register-password">Пароль</label>
+          <input type="password" id="register-password" maxlength="50" required />
+          <label for="register-role">Роль</label>
+          <select id="register-role">
+            <option value="player">Игрок</option>
+            <option value="host">Ведущий</option>
+            <option value="admin">Администратор</option>
+          </select>
+          <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
+          <button type="button" class="btn btn-primary auth-switch-btn" id="btn-show-login">Вернуться ко входу</button>
+        </form>
+      </section>
     </div>
   </div>
 </div>
@@ -50,154 +203,76 @@
 <!-- ============ RULES MODAL ============ -->
 <div class="modal-overlay" id="rules-modal">
   <div class="modal">
-    <button class="modal-close" id="btn-close-rules">✕</button>
-    <h2>📖 Правила игры «Бункер»</h2>
-
+    <button class="modal-close" id="btn-close-rules">×</button>
+    <h2>Правила игры «Бункер»</h2>
     <h3>Сюжет и цель</h3>
-    <p>На Земле глобальная катастрофа. В бункер попадёт только часть группы, остальные останутся снаружи. Ваша задача — убедить других, что именно ваш персонаж полезен для выживания и восстановления жизни после выхода из бункера.</p>
-
-    <h3>Режимы из оригинальных правил</h3>
+    <p>На Земле глобальная катастрофа. В бункер попадёт только часть группы. Ваша задача — убедить других, что именно ваш персонаж полезен для выживания.</p>
+    <h3>Структура раунда</h3>
     <ul>
-      <li><strong>Базовый режим</strong>: короткий финал, главная цель — попасть в бункер.</li>
-      <li><strong>История выживания</strong>: расширенный финал с дополнительной угрозой и обсуждением, кто реально выжил бы после катастрофы.</li>
-      <li><strong>Цель «Спасение»</strong>: рекомендуется для компании до 7 игроков.</li>
-      <li><strong>Цель «Возрождение»</strong>: рекомендуется от 8 игроков (желательно наличие пары, способной продолжить род).</li>
-    </ul>
-
-    <h3>Подготовка к игре</h3>
-    <ul>
-      <li>Добавьте игроков (от 2 до 12 человек).</li>
-      <li>Каждый получает характеристики персонажа: профессию, здоровье, хобби, багаж, факт/фобию и карту действия.</li>
-      <li>Откройте случайную катастрофу и описание бункера.</li>
-      <li>В этой версии приложения вместимость бункера вычисляется автоматически: половина игроков (округление вверх), но при 3 игроках в бункер попадает только 1.</li>
-    </ul>
-
-    <h3>Структура раунда (по материалам документа)</h3>
-    <ul>
-      <li><strong>Исследование бункера</strong>: открывается новая информация о бункере.</li>
-      <li><strong>Круг открытия карт</strong>: игроки по очереди раскрывают по одной карте и аргументируют, почему должны попасть в бункер.</li>
-      <li><strong>Голосование</strong>: группа определяет кандидата на выбывание.</li>
-      <li>В оригинальных правилах игра длится до 5 раундов, но на практике раунды идут до нужного числа выбывших.</li>
-    </ul>
-
-    <h3>Голосование</h3>
-    <ul>
-      <li>Перед голосованием проведите короткое общее обсуждение кандидатов.</li>
-      <li>Голосуйте за выбывание игроков.</li>
-      <li>Игрок с наибольшим числом голосов выбывает.</li>
-      <li>При ничьей дайте кандидатам короткую защиту и переголосуйте.</li>
-    </ul>
-
-    <h3>Финал</h3>
-    <ul>
-      <li>Когда число невыбывших игроков становится равно числу мест в бункере, игра заканчивается.</li>
-      <li>Выжившие считаются попавшими в бункер.</li>
-      <li>В расширенном формате можно дополнительно обсудить, пережила бы эта команда катастрофу и случайную угрозу.</li>
-    </ul>
-
-    <h3>Советы:</h3>
-    <ul>
-      <li>Держите эмоции в рамках игры: вы оцениваете персонажей, а не людей.</li>
-      <li>Для вашей компании можно убрать карты, которые не подходят по тематике.</li>
-      <li>Сильнее всего побеждает команда с разнообразными полезными навыками.</li>
+      <li>Каждый раунд игроки по очереди раскрывают по одному атрибуту</li>
+      <li>После раскрытия всех атрибутов проводится голосование</li>
+      <li>Игрок с наибольшим числом голосов выбывает</li>
+      <li>Игра продолжается, пока не останется нужное число выживших</li>
     </ul>
   </div>
 </div>
 
 <!-- ============ PRIVATE PLAYER MODAL ============ -->
 <div class="modal-overlay" id="private-player-modal">
-  <div class="modal private-modal">
-    <button class="modal-close" id="btn-close-private">✕</button>
-    <h2>🙈 Приватная карточка игрока</h2>
-    <p class="private-intro">
-      Передайте устройство игроку <strong id="private-player-name">—</strong>. Только он должен смотреть этот экран.
-    </p>
-    <p class="private-round-note" id="private-round-note"></p>
-
-    <div class="private-attrs" id="private-attrs"></div>
-
-    <div class="card-actions" style="margin-top:1rem; justify-content:flex-start;">
-      <button class="btn btn-secondary" id="btn-private-done">Готово, скрыть карточку</button>
-    </div>
+  <div class="modal">
+    <button class="modal-close" id="btn-close-private">×</button>
+    <h2>Приватная карточка игрока</h2>
+    <p id="private-player-name" style="font-weight:bold;"></p>
+    <div id="private-attrs" class="attributes-grid"></div>
+    <button class="btn btn-secondary" id="btn-private-done">Закрыть</button>
   </div>
 </div>
 
 <!-- ============ VOTING CARD MODAL ============ -->
 <div class="modal-overlay" id="voting-card-modal">
-  <div class="modal voting-card-modal">
-    <button class="modal-close" id="btn-close-voting-card">✕</button>
+  <div class="modal">
+    <button class="modal-close" id="btn-close-voting-card">×</button>
     <h2>Карточка игрока: <span id="voting-card-player-name">—</span></h2>
-    <p class="private-intro">
-      Показаны известные данные игрока. Скрытые характеристики отмечены как ???
-    </p>
-    <div class="attributes-grid" id="voting-card-content"></div>
-    <div class="card-actions" style="margin-top:1rem; justify-content:flex-start;">
-      <button class="btn btn-secondary" id="btn-voting-card-done">Закрыть</button>
-    </div>
+    <div id="voting-card-content" class="attributes-grid"></div>
+    <button class="btn btn-secondary" id="btn-voting-card-done">Закрыть</button>
   </div>
 </div>
-
-<!-- ============ HEADER ============ -->
-<header class="game-header">
-  <div class="auth-userbar">
-    <span id="auth-status">Не авторизован</span>
-    <a class="btn btn-secondary" href="profile.html" id="btn-profile">Профиль</a>
-    <button class="btn btn-secondary" id="btn-logout" style="display:none;">Выйти</button>
-  </div>
-  <div class="game-logo">🛡️</div>
-  <h1 class="game-title">Бункер <span class="version-badge">Beta</span></h1>
-  <p class="game-subtitle">Браузерная социальная игра на выживание</p>
-</header>
 
 <!-- ============ SCREEN: SETUP ============ -->
 <div class="screen active" id="screen-setup">
   <div class="container">
-
-    <div class="setup-grid" style="grid-template-columns: 1fr;">
-      <div class="card">
-        <div class="section-title">🌐 Онлайн-комната</div>
-        <div class="room-form-grid">
-          <div class="room-field">
-            <label for="room-username-input">Ваше имя в комнате</label>
-            <input type="text" id="room-username-input" maxlength="30" placeholder="Например: Артём" autocomplete="off" />
-          </div>
-          <div class="room-field">
-            <label for="room-code-input">Код комнаты</label>
-            <input type="text" id="room-code-input" maxlength="6" placeholder="Например: A7K2Q9" autocomplete="off" />
-          </div>
+    <div class="card">
+      <div class="section-title">Онлайн-комната</div>
+      <div class="room-form-grid">
+        <div class="room-field">
+          <label for="room-username-input">Ваше имя в комнате</label>
+          <input type="text" id="room-username-input" maxlength="30" placeholder="Например: Артём" />
         </div>
-        <div class="room-actions">
-          <button class="btn btn-primary" id="btn-room-create">Создать комнату</button>
-          <button class="btn btn-secondary" id="btn-room-join">Войти по коду</button>
-          <button class="btn btn-danger" id="btn-room-leave" disabled>Выйти из комнаты</button>
-        </div>
-        <p class="room-status" id="room-status">Офлайн режим: игра только на этом устройстве.</p>
-        <div class="room-members-wrap" id="room-members-wrap" style="display:none;">
-          <p class="room-members-title">Участники онлайн</p>
-          <div class="room-members" id="room-members"></div>
+        <div class="room-field">
+          <label for="room-code-input">Код комнаты</label>
+          <input type="text" id="room-code-input" maxlength="6" placeholder="Например: A7K2Q9" />
         </div>
       </div>
-
-      <div class="card" id="players-setup-card">
-        <div class="section-title">👥 Игроки</div>
-        <div class="player-add-row" id="player-add-row">
-          <input type="text" id="player-name-input" placeholder="Имя игрока..." maxlength="30" autocomplete="off" />
-          <button class="btn btn-primary" id="btn-add-player">+ Добавить</button>
+      <div class="room-actions">
+        <button class="btn btn-primary" id="btn-room-create">Создать комнату</button>
+        <button class="btn btn-secondary" id="btn-room-join">Войти по коду</button>
+        <button class="btn btn-danger" id="btn-room-leave" disabled>Выйти из комнаты</button>
+      </div>
+      <p class="room-status" id="room-status"></p>
+      <div id="room-members-wrap" style="margin-top:1rem;">
+        <p class="room-members-title">Участники онлайн</p>
+        <div id="room-members" class="room-members"></div>
+        <div id="room-ready-wrap">
+          <label>
+            <input type="checkbox" id="room-ready-checkbox" /> Я готов
+          </label>
+          <span id="room-ready-summary"></span>
         </div>
-        <div id="player-list"></div>
-        <p style="margin-top:0.75rem; font-size:0.78rem; color:var(--text-muted);">
-          Минимум 2, максимум 12 игроков
-        </p>
       </div>
     </div>
-
     <div class="setup-footer">
-      <button class="btn btn-secondary" id="btn-rules" style="margin-right:1rem;">
-        📖 Правила
-      </button>
-      <button class="btn btn-primary btn-lg" id="btn-start-game" disabled>
-        🚀 Начать игру
-      </button>
+      <button class="btn btn-secondary btn-lg" id="btn-rules">Правила</button>
+      <button class="btn btn-primary btn-lg" id="btn-start-game" disabled>Начать игру</button>
     </div>
   </div>
 </div>
@@ -205,69 +280,40 @@
 <!-- ============ SCREEN: CATASTROPHE ============ -->
 <div class="screen" id="screen-catastrophe">
   <div class="container catastrophe-screen">
-    <div class="catastrophe-icon-big" id="catastrophe-icon">☢️</div>
-    <h2 class="catastrophe-title" id="catastrophe-title">Ядерная война</h2>
-    <p class="catastrophe-desc" id="catastrophe-description">Описание катастрофы...</p>
-
+    <div class="catastrophe-icon-big" id="catastrophe-icon">—</div>
+    <h2 class="catastrophe-title" id="catastrophe-title">Загрузка...</h2>
+    <p class="catastrophe-desc" id="catastrophe-description"></p>
     <div class="bunker-info-box">
-      <div class="bunker-info-title">🏠 Бункер</div>
-      <p class="bunker-info-text" id="bunker-description">Описание бункера...</p>
+      <div class="bunker-info-title">Бункер</div>
+      <p id="bunker-description"></p>
       <div class="bunker-stats">
-        <div class="bunker-stat">
-          <div class="bunker-stat-val safe" id="bunker-capacity-display">3</div>
-          <div class="bunker-stat-label">Мест в бункере</div>
-        </div>
-        <div class="bunker-stat">
-          <div class="bunker-stat-val" id="total-players-display">6</div>
-          <div class="bunker-stat-label">Всего игроков</div>
-        </div>
-        <div class="bunker-stat">
-          <div class="bunker-stat-val danger" id="eliminated-need-display">3</div>
-          <div class="bunker-stat-label">Нужно выгнать</div>
-        </div>
+        <div class="bunker-stat"><div class="bunker-stat-val safe" id="bunker-capacity-display">0</div><div>Мест</div></div>
+        <div class="bunker-stat"><div class="bunker-stat-val" id="total-players-display">0</div><div>Игроков</div></div>
       </div>
     </div>
-
-    <button class="btn btn-primary btn-lg" id="btn-proceed-game">
-      🃏 Раздать карточки и начать!
-    </button>
+    <button class="btn btn-primary btn-lg" id="btn-proceed-game">Начать игру</button>
   </div>
 </div>
 
 <!-- ============ SCREEN: GAME ============ -->
 <div class="screen" id="screen-game">
   <div class="container">
-
-    <!-- Meta bar -->
-    <div class="game-meta" style="margin-bottom:1rem;">
+    <div class="game-meta">
       <div class="meta-badge">Раунд: <span id="round-display">1</span></div>
-      <div class="meta-badge">Живых: <span id="alive-display">6</span></div>
-      <div class="meta-badge">Мест: <span id="bunker-spots-display">3</span></div>
+      <div class="meta-badge">Живых: <span id="alive-display">0</span></div>
+      <div class="meta-badge">Мест: <span id="bunker-spots-display">0</span></div>
     </div>
-
     <div class="game-layout">
-
-      <!-- Sidebar: player list -->
       <aside class="sidebar">
         <div class="sidebar-title">Игроки</div>
         <div id="players-overview"></div>
       </aside>
-
-      <!-- Main: current player card -->
       <main>
         <div class="player-card-main" id="current-player-card">
-          <p style="color:var(--text-muted); text-align:center; padding:2rem;">
-            Выберите игрока слева
-          </p>
+          <p style="text-align:center; color:var(--text-muted);">Выберите игрока слева</p>
         </div>
-
-        <div class="game-actions-bar">
-          <span style="font-size:0.85rem; color:var(--text-secondary);">
-            💡 В каждом раунде игрок раскрывает только 1 атрибут (в 1-м раунде — профессию)
-          </span>
-        </div>
+        <div class="game-actions-bar" id="game-actions-bar"></div>
       </main>
-
     </div>
   </div>
 </div>
@@ -275,55 +321,28 @@
 <!-- ============ SCREEN: VOTING ============ -->
 <div class="screen" id="screen-voting">
   <div class="container">
-    <div class="voting-header">
-      <h2 class="voting-title">🗳️ Голосование</h2>
-      <p class="voting-subtitle">
-        Раунд <strong id="voting-round">1</strong> —
-        Выбывает: <strong id="voting-eliminate">1</strong> чел.
-      </p>
-    </div>
-
-    <div id="voting-players"></div>
-
-    <div class="voting-footer">
-      <p class="voting-tip">
-        Нажимайте «Голосовать» за каждого игрока столько раз, сколько за него проголосовало.<br/>
-        При ничьей проводится переголосование между лидерами.
-      </p>
-      <button class="btn btn-danger btn-lg" id="btn-confirm-votes" disabled>
-        ✅ Подтвердить итоги голосования
-      </button>
-    </div>
+    <h2>Голосование</h2>
+    <p>Раунд <strong id="voting-round">1</strong> — выбывает 1 человек</p>
+    <div id="voting-players" class="voting-players"></div>
+    <button class="btn btn-danger btn-lg" id="btn-confirm-votes" disabled>Подтвердить голосование</button>
   </div>
 </div>
 
 <!-- ============ SCREEN: RESULTS ============ -->
 <div class="screen" id="screen-results">
   <div class="container">
-    <div class="results-header">
-      <div class="results-icon" id="results-catastrophe-icon">🛡️</div>
-      <h2 class="results-title">Игра завершена!</h2>
-      <p class="results-event">Катастрофа: <strong id="results-catastrophe">—</strong></p>
-    </div>
-
+    <h2>Игра завершена!</h2>
+    <div id="results-catastrophe"></div>
     <div class="card">
-      <div class="results-section-title green">🏆 Выжившие — попали в бункер</div>
-      <div id="survivors-list"></div>
+      <div class="results-section-title green">Выжившие</div>
+      <div id="survivors-list" class="results-list"></div>
     </div>
-
     <div class="card">
-      <div class="results-section-title red">☠️ Не попали в бункер</div>
-      <div id="eliminated-list"></div>
+      <div class="results-section-title red">Не попали в бункер</div>
+      <div id="eliminated-list" class="results-list"></div>
     </div>
-
-    <div class="results-footer">
-      <button class="btn btn-primary btn-lg" id="btn-restart">
-        🔄 Начать новую игру
-      </button>
-      <button class="btn btn-secondary btn-lg" id="btn-back-menu" style="margin-left:0.75rem;">
-        🏠 Выйти в главное меню
-      </button>
-    </div>
+    <button class="btn btn-primary btn-lg" id="btn-restart">Играть снова</button>
+    <button class="btn btn-secondary btn-lg" id="btn-back-menu">Выйти в меню</button>
   </div>
 </div>
 
@@ -331,18 +350,5 @@
 <script src="js/auth.js"></script>
 <script src="js/rooms.js"></script>
 <script src="js/game.js"></script>
-<script>
-  // Rules modal open/close
-  document.getElementById('btn-rules')?.addEventListener('click', () => {
-    document.getElementById('rules-modal').classList.add('open');
-  });
-  document.getElementById('btn-close-rules')?.addEventListener('click', () => {
-    document.getElementById('rules-modal').classList.remove('open');
-  });
-  document.getElementById('rules-modal')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
-  });
-</script>
-
 </body>
 </html>

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Бункер — Список комнат</title>
+  <meta name="description" content="Выберите игровую комнату или создайте новую" />
+  <!-- Подключаем шрифты -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Основной стиль лобби (тёмная тема) -->
+  <link rel="stylesheet" href="css/lobby.css?v=2" />
+  <style>
+    /* ---- Переопределение шрифтов для всех элементов ---- */
+    body, .lobby-page, .rooms-table, .rooms-table th, .rooms-table td,
+    .action-btn, .profile-btn, .profile-text, .hover-item,
+    .modal, .modal h2, .modal label, .modal input, .modal select,
+    .auth-form, .auth-form label, .auth-form input, .auth-form select,
+    .btn, .btn-primary, .btn-secondary,
+    .empty-rooms, .room-join-btn, .badge-private, .game-mode-badge,
+    .lobby-subtitle, .lobby-header, .auth-intro, .auth-subtitle,
+    .auth-panel h3, .auth-close-btn {
+      font-family: 'Manrope', 'Segoe UI', Arial, sans-serif !important;
+    }
+
+    /* Для заголовков и акцентов используем Rubik Glitch */
+    .lobby-subtitle, .modal h2, .auth-intro h2, .auth-panel h3,
+    .btn, .btn-primary, .btn-secondary, .profile-btn, .profile-text,
+    .hover-item, .action-btn {
+      font-family: 'Rubik Glitch', 'Manrope', cursive !important;
+    }
+
+    /* ---- Уведомления ---- */
+    .notification {
+      position: fixed;
+      top: 1.5rem;
+      left: 1.5rem;
+      padding: 0.85rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      opacity: 0;
+      transform: translateY(-12px);
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 9999;
+      max-width: 340px;
+      pointer-events: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      font-family: 'Manrope', sans-serif !important;
+    }
+    .notification.show { opacity: 1; transform: translateY(0); }
+    .notification.info { background: #1d4ed8; color: #fff; }
+    .notification.success { background: #059669; color: #fff; }
+    .notification.warning { background: #d97706; color: #111; }
+    .notification.error { background: #dc2626; color: #fff; }
+
+    /* ---- Оверлей авторизации ---- */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(1rem, 3vw, 2rem);
+    }
+    .auth-overlay.open { display: flex; }
+    .auth-layout {
+      width: min(560px, 100%);
+      background: #1a1a1a;
+      border: 2px solid #ffffff;
+      border-radius: 15px;
+      padding: 1.35rem;
+      box-shadow: 0 22px 48px rgba(0,0,0,0.6);
+      position: relative;
+    }
+    .auth-intro h2 {
+      font-size: 1.4rem;
+      margin-bottom: 0.3rem;
+      color: #ffffff;
+    }
+    .auth-subtitle { color: #cccccc; margin-bottom: 1rem; }
+    .auth-grid { display: grid; gap: 1rem; }
+    .auth-panel {
+      border: 1px solid #ffffff;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.4);
+      padding: 1rem;
+      display: none;
+    }
+    .auth-panel.active { display: block; }
+    .auth-close-btn {
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid #ffffff;
+      border-radius: 999px;
+      background: transparent;
+      color: #ffffff;
+      font-size: 1.15rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .auth-close-btn:hover { background: rgba(255,255,255,0.1); color: #FFA600; }
+    .auth-panel h3 {
+      color: #ffffff;
+      margin-bottom: 0.45rem;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .auth-form .btn { width: 100%; }
+    .auth-form label {
+      font-size: 0.8rem;
+      color: #cccccc;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .auth-form input, .auth-form select {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid #ffffff;
+      color: #ffffff;
+      padding: 0.65rem 0.8rem;
+      border-radius: 8px;
+    }
+    .auth-form input:focus, .auth-form select:focus {
+      outline: none;
+      box-shadow: 0 0 8px #ffa600;
+    }
+    .auth-form input::placeholder { color: rgba(255,255,255,0.3); }
+    .auth-form select option { background: #000; color: #fff; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.7rem 1.4rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s ease;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .btn-primary { background: #ffffff; color: #000000; }
+    .btn-primary:hover { background: #ffa600; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,166,0,0.4); }
+    .btn-secondary { background: transparent; color: #ffffff; border: 1px solid #ffffff; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+    .auth-switch-btn { margin-top: 0.25rem; }
+    .hidden-elements { display: none; }
+
+    /* ---- Модалки ---- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #1a1a1a;
+      border: 2px solid #ffffff;
+      border-radius: 15px;
+      padding: 2rem;
+      max-width: 480px;
+      width: 100%;
+      max-height: 86vh;
+      overflow-y: auto;
+      position: relative;
+      color: #ffffff;
+    }
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: #ffffff;
+      font-size: 2rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .modal-close:hover { transform: scale(1.1); color: #FFA600; }
+    .modal h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: #FFDD9F;
+    }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: #cccccc;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.4rem;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid #ffffff;
+      border-radius: 8px;
+      padding: 0.7rem;
+      color: #ffffff;
+      font-size: 1rem;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      box-shadow: 0 0 8px #ffa600;
+    }
+    .form-group input::placeholder { color: rgba(255,255,255,0.3); }
+    .password-field { display: none; }
+    .password-field.show { display: block; }
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+    .modal-actions .btn { min-width: 100px; }
+
+    /* ---- Таблица и кнопки (переопределяем из lobby.css) ---- */
+    .rooms-table tbody::after { height: 0; }
+    .rooms-table td { padding: 12px 0; }
+    .rooms-table tr { cursor: default; }
+    .rooms-table tr:hover { background: rgba(255, 166, 0, 0.2); }
+    .empty-rooms td { text-align: center; padding: 40px 0; color: #aaaaaa; }
+    .room-join-btn {
+      background: #FFA600;
+      border: none;
+      color: #000;
+      padding: 4px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .room-join-btn:hover { background: #ffc44d; transform: scale(1.05); }
+    .badge-private {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-private.yes { background: #fee2e2; color: #b91c1c; }
+    .badge-private.no { background: #dcfce7; color: #15803d; }
+    .game-mode-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+
+    /* ---- Адаптив ---- */
+    @media (max-width: 700px) {
+      .profile-area { top: 15px; right: 15px; }
+      .logo-top-left { top: 15px; left: 15px; }
+      .small-logo { width: 140px; }
+      .lobby-header { margin-top: 70px; margin-bottom: 30px; }
+      .lobby-subtitle { font-size: 28px; }
+      .rooms-actions { flex-direction: column; gap: 15px; align-items: stretch; }
+      .actions-left, .actions-right { justify-content: center; gap: 15px; flex-wrap: wrap; }
+      .action-btn { margin: 0; min-width: 100px; padding: 8px 20px; }
+      .rooms-table th, .rooms-table td { padding: 8px 4px; font-size: 12px; }
+    }
+
+    .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.form-group label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #FFA600;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+  </style>
+</head>
+<body>
+
+<div class="notification" id="notification"></div>
+
+<!-- ===== Оверлей авторизации (те же ID) ===== -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-layout">
+    <button type="button" class="auth-close-btn" id="btn-auth-close" aria-label="Закрыть окно входа">×</button>
+    <div class="auth-intro">
+      <h2>Авторизация</h2>
+      <p class="auth-subtitle">Войдите или создайте аккаунт, чтобы начать игру</p>
+    </div>
+    <div class="auth-grid">
+      <section class="auth-panel" id="auth-panel-login">
+        <h3>Вход</h3>
+        <form id="login-form" class="auth-form" autocomplete="on">
+          <label for="login-username">Логин</label>
+          <input type="text" id="login-username" maxlength="30" required />
+          <label for="login-password">Пароль</label>
+          <input type="password" id="login-password" maxlength="50" required />
+          <button type="submit" class="btn btn-primary">Войти</button>
+          <button type="button" class="btn btn-secondary auth-switch-btn" id="btn-show-register">Регистрация</button>
+        </form>
+      </section>
+      <section class="auth-panel" id="auth-panel-register" style="display:none;">
+        <h3>Регистрация</h3>
+        <form id="register-form" class="auth-form" autocomplete="on">
+          <label for="register-username">Логин</label>
+          <input type="text" id="register-username" maxlength="30" required />
+          <label for="register-password">Пароль</label>
+          <input type="password" id="register-password" maxlength="50" required />
+          <label for="register-role">Роль</label>
+          <select id="register-role" required>
+            <option value="player">Игрок</option>
+            <option value="host">Ведущий</option>
+            <option value="admin">Администратор</option>
+          </select>
+          <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
+          <button type="button" class="btn btn-primary auth-switch-btn" id="btn-show-login">Вернуться ко входу</button>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Скрытые элементы для auth.js (если нужны) ===== -->
+<div class="hidden-elements">
+  <span id="auth-status"></span>
+  <button id="btn-login"></button>
+  <button id="btn-logout"></button>
+</div>
+
+<!-- ===== Основной контент в стиле lobby.css ===== -->
+<div class="lobby-page">
+
+  <!-- Профиль справа сверху -->
+  <div class="profile-area" id="profileArea">
+    <button class="profile-btn" id="profileBtn">
+      <img src="images/Profile.svg" alt="Профиль" class="profile-icon">
+      <span class="profile-text" id="profileUsername">Гость</span>
+    </button>
+    <div class="profile-hover-menu" id="dropdownMenu">
+      <!-- Содержимое будет заполняться через JS -->
+    </div>
+  </div>
+
+  <!-- Логотип маленький слева сверху -->
+  <div class="logo-top-left">
+    <a href="main.html"><img src="images/logo-mini.svg" alt="БУНКЕР" class="small-logo"></a>
+  </div>
+
+  <!-- Заголовок -->
+  <div class="lobby-header">
+    <h2 class="lobby-subtitle">Список комнат</h2>
+  </div>
+
+  <!-- Таблица -->
+  <table class="rooms-table">
+    <thead>
+      <tr>
+        <th>Название</th>
+        <th>Приватность</th>
+        <th>Режим игры</th>
+        <th>Количество</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="roomsTableBody">
+      <tr class="empty-rooms">
+        <td colspan="5">Загрузка комнат...</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Кнопки -->
+  <div class="rooms-actions">
+    <div class="actions-left">
+      <button class="action-btn" id="refreshBtn">Обновить</button>
+      <button class="action-btn" id="createRoomBtn">Создать</button>
+    </div>
+    <div class="actions-right">
+      <button class="action-btn" id="backBtn" onclick="location.href='main.html'">Назад</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== Модалка создания (все ID сохранены) ===== -->
+<div class="modal-overlay" id="createRoomModal">
+  <div class="modal create-room-modal">
+    <button class="modal-close" id="closeCreateModal">×</button>
+    <h2>Создание комнаты</h2>
+    <form id="createRoomForm">
+      <div class="form-group">
+        <label>Ваше имя</label>
+        <input type="text" id="createUsername" maxlength="30" placeholder="Введите ваше имя" required>
+      </div>
+      <div class="form-group">
+        <label>Режим игры</label>
+        <select id="gameMode">
+          <option value="classic">Классический</option>
+          <option value="nonclassic">Не классика</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="isPrivateCheckbox"> Приватная комната
+        </label>
+      </div>
+      <div class="form-group password-field" id="passwordField">
+        <label>Пароль комнаты</label>
+        <input type="text" id="roomPassword" maxlength="10" placeholder="Введите пароль">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="cancelCreateBtn">Отмена</button>
+        <button type="submit" class="btn btn-primary">Создать</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Модалка приватного входа (все ID сохранены) ===== -->
+<div class="modal-overlay" id="privateJoinModal">
+  <div class="modal private-join-modal">
+    <button class="modal-close" id="closePrivateModal">×</button>
+    <h2>Вход в приватную комнату</h2>
+    <form id="privateJoinForm">
+      <div class="form-group">
+        <label>Код комнаты</label>
+        <input type="text" id="privateRoomCode" readonly style="background:#333; color:#fff;">
+      </div>
+      <div class="form-group">
+        <label>Пароль комнаты</label>
+        <input type="password" id="privatePassword" placeholder="Введите пароль" required>
+      </div>
+      <div class="form-group">
+        <label>Ваше имя</label>
+        <input type="text" id="privateUsername" maxlength="30" placeholder="Введите ваше имя" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="cancelPrivateBtn">Отмена</button>
+        <button type="submit" class="btn btn-primary">Войти</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script src="js/lobbies.js"></script>
+<script>
+// ==================== УПРАВЛЕНИЕ ПРОФИЛЕМ И АВТОРИЗАЦИЕЙ ====================
+
+function showNotification(msg, type = 'info') {
+  const notif = document.getElementById('notification');
+  if (!notif) return;
+  notif.textContent = msg;
+  notif.className = `notification ${type} show`;
+  clearTimeout(notif._timeout);
+  notif._timeout = setTimeout(() => notif.classList.remove('show'), 3000);
+}
+
+function openAuthModal() {
+  const authOverlay = document.getElementById('auth-overlay');
+  if (authOverlay) authOverlay.classList.add('open');
+}
+
+function closeAuthModal() {
+  const authOverlay = document.getElementById('auth-overlay');
+  if (authOverlay) authOverlay.classList.remove('open');
+}
+
+function updateDropdownMenu() {
+  const dropdownMenu = document.getElementById('dropdownMenu');
+  const profileUsername = document.getElementById('profileUsername');
+  const profileArea = document.getElementById('profileArea');
+  const profileIcon = document.querySelector('.profile-icon');
+  
+  if (!dropdownMenu || !profileArea) return;
+  
+  const isAuth = window.BunkerAuth && typeof window.BunkerAuth.isAuthenticated === 'function' 
+    ? window.BunkerAuth.isAuthenticated() 
+    : false;
+  const user = window.BunkerAuth?.getCurrentUser?.();
+  
+  if (isAuth && user && user.username) {
+    // Авторизован
+    profileUsername.textContent = user.username;
+    profileArea.classList.add('logged-in');
+    if (profileIcon) profileIcon.src = 'images/Profile-orange.svg';
+    
+    dropdownMenu.innerHTML = `
+      <div class="hover-item" onclick="location.href='profile.html'">Личный кабинет</div>
+      <div class="hover-item" id="logoutDropdownBtn">Выйти</div>
+    `;
+    
+    document.getElementById('logoutDropdownBtn')?.addEventListener('click', () => {
+      if (window.BunkerAuth?.logout) {
+        window.BunkerAuth.logout();
+        updateDropdownMenu();
+        showNotification('Вы вышли из аккаунта', 'info');
+        if (typeof loadRooms === 'function') loadRooms();
+      }
+    });
+  } else {
+    // Не авторизован
+    profileUsername.textContent = 'Гость';
+    profileArea.classList.remove('logged-in');
+    if (profileIcon) profileIcon.src = 'images/Profile.svg';
+    
+    dropdownMenu.innerHTML = `
+      <div class="hover-item" id="loginDropdownBtn">Войти</div>
+    `;
+    
+    document.getElementById('loginDropdownBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openAuthModal();
+    });
+  }
+}
+
+// Привязка форм авторизации
+function bindAuthForms() {
+  document.getElementById('login-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('login-username')?.value.trim() || '';
+    const password = document.getElementById('login-password')?.value || '';
+    if (!username || !password) {
+      showNotification('Заполните логин и пароль', 'warning');
+      return;
+    }
+    if (window.BunkerAuth?.login(username, password)) {
+      closeAuthModal();
+      updateDropdownMenu();
+      showNotification(`Добро пожаловать, ${username}!`, 'success');
+      if (typeof loadRooms === 'function') loadRooms();
+    }
+  });
+
+  document.getElementById('register-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('register-username')?.value.trim() || '';
+    const password = document.getElementById('register-password')?.value || '';
+    const role = document.getElementById('register-role')?.value || 'player';
+    if (!username || !password) {
+      showNotification('Заполните логин и пароль', 'warning');
+      return;
+    }
+    if (window.BunkerAuth?.register(username, password, role)) {
+      document.getElementById('auth-panel-login').style.display = 'block';
+      document.getElementById('auth-panel-register').style.display = 'none';
+      showNotification('Регистрация успешна! Теперь войдите.', 'success');
+    }
+  });
+
+  document.getElementById('btn-show-register')?.addEventListener('click', () => {
+    document.getElementById('auth-panel-login').style.display = 'none';
+    document.getElementById('auth-panel-register').style.display = 'block';
+  });
+  document.getElementById('btn-show-login')?.addEventListener('click', () => {
+    document.getElementById('auth-panel-register').style.display = 'none';
+    document.getElementById('auth-panel-login').style.display = 'block';
+  });
+  document.getElementById('btn-auth-close')?.addEventListener('click', closeAuthModal);
+  document.getElementById('auth-overlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeAuthModal();
+  });
+}
+
+// ===== ОБРАБОТЧИК КНОПКИ ПРОФИЛЯ =====
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.BunkerAuth?.init) {
+    window.BunkerAuth.init(() => {
+      updateDropdownMenu();
+      closeAuthModal();
+    }, { openOnUnauth: false });
+  }
+
+  setTimeout(() => {
+    updateDropdownMenu();
+    bindAuthForms();
+
+    // Клик по кнопке профиля (если не авторизован – открываем модалку)
+    const profileBtn = document.getElementById('profileBtn');
+    if (profileBtn) {
+      profileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isAuth = window.BunkerAuth?.isAuthenticated?.() ?? false;
+        if (!isAuth) {
+          openAuthModal();
+        }
+        // Если авторизован – ничего не делаем, меню появляется при наведении
+      });
+    }
+  }, 200);
+});
+
+window.updateDropdownMenu = updateDropdownMenu;
+window.openAuthModal = openAuthModal;
+</script>
+
+</body>
+</html>

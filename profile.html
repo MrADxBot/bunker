@@ -1,101 +1,425 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Бункер - Профиль</title>
-  <meta name="description" content="Профиль пользователя игры Бункер" />
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>БУНКЕР – Личный кабинет</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/lk.css">
+  <!-- Дополнительные стили для уведомлений и оверлея авторизации -->
+  <style>
+    /* --- Уведомления (как в main.css) --- */
+    .notification {
+      position: fixed;
+      top: 1.5rem;
+      left: 1.5rem;
+      padding: 0.85rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      opacity: 0;
+      transform: translateY(-12px);
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 9999;
+      max-width: 340px;
+      pointer-events: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      font-family: 'Manrope', sans-serif;
+    }
+    .notification.show { opacity: 1; transform: translateY(0); }
+    .notification.info { background: #1d4ed8; color: #fff; }
+    .notification.success { background: #059669; color: #fff; }
+    .notification.warning { background: #d97706; color: #111; }
+    .notification.error { background: #dc2626; color: #fff; }
+
+    /* --- Оверлей авторизации (скопирован из style.css и адаптирован) --- */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1200;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(1rem, 3vw, 2rem);
+    }
+    .auth-overlay.open {
+      display: flex;
+    }
+    .auth-layout {
+      width: min(560px, 100%);
+      background: #1a1a1a;
+      border: 2px solid #ffffff;
+      border-radius: 15px;
+      padding: 1.35rem;
+      box-shadow: 0 22px 48px rgba(0,0,0,0.6);
+      position: relative;
+    }
+    .auth-intro h2 {
+      font-size: 1.4rem;
+      margin-bottom: 0.3rem;
+      color: #ffffff;
+      font-family: 'Rubik Glitch', cursive;
+    }
+    .auth-subtitle {
+      color: #cccccc;
+      margin-bottom: 1rem;
+    }
+    .auth-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    .auth-panel {
+      border: 1px solid #ffffff;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.4);
+      padding: 1rem;
+      width: 100%;
+      display: none;
+    }
+    .auth-panel.active {
+      display: block;
+    }
+    .auth-close-btn {
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid #ffffff;
+      border-radius: 999px;
+      background: transparent;
+      color: #ffffff;
+      font-size: 1.15rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .auth-close-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: #FFA600;
+    }
+    .auth-panel h3 {
+      color: #ffffff;
+      margin-bottom: 0.45rem;
+      font-family: 'Rubik Glitch', cursive;
+    }
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .auth-form .btn {
+      width: 100%;
+    }
+    .auth-form label {
+      font-size: 0.8rem;
+      color: #cccccc;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .auth-form input,
+    .auth-form select {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid #ffffff;
+      color: #ffffff;
+      padding: 0.65rem 0.8rem;
+      border-radius: 8px;
+      margin-bottom: 0.2rem;
+      font-family: 'Manrope', sans-serif;
+    }
+    .auth-form input:focus,
+    .auth-form select:focus {
+      outline: none;
+      box-shadow: 0 0 8px #ffa600;
+    }
+    .auth-form input::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+    .auth-form select option {
+      background: #000;
+      color: #fff;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.7rem 1.4rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s ease;
+      text-decoration: none;
+      white-space: normal;
+      text-align: center;
+      line-height: 1.25;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      font-family: 'Rubik Glitch', cursive;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .btn-primary {
+      background: #ffffff;
+      color: #000000;
+    }
+    .btn-primary:hover {
+      background: #ffa600;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(255,166,0,0.4);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: #ffffff;
+      border: 1px solid #ffffff;
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    .auth-switch-btn {
+      margin-top: 0.25rem;
+    }
+
+    /* Скрытые элементы для auth.js */
+    .hidden-elements { display: none; }
+  </style>
 </head>
 <body>
 
+<!-- ===== УВЕДОМЛЕНИЯ ===== -->
 <div class="notification" id="notification"></div>
 
+<!-- ===== ОВЕРЛЕЙ АВТОРИЗАЦИИ (для auth.js) ===== -->
 <div class="auth-overlay" id="auth-overlay">
-  <div class="auth-card">
-    <h2>Авторизация</h2>
-    <p class="auth-subtitle">Для доступа к профилю выполните вход или регистрацию</p>
+  <div class="auth-layout">
+    <button type="button" class="auth-close-btn" id="btn-auth-close" aria-label="Закрыть окно входа">×</button>
+    <div class="auth-intro">
+      <h2>Авторизация</h2>
+      <p class="auth-subtitle">Для доступа к профилю выполните вход или регистрацию</p>
+    </div>
 
     <div class="auth-grid">
-      <form id="login-form" class="auth-form" autocomplete="on">
+      <section class="auth-panel active" id="auth-panel-login">
         <h3>Вход</h3>
-        <label for="login-username">Логин</label>
-        <input type="text" id="login-username" maxlength="30" required />
-        <label for="login-password">Пароль</label>
-        <input type="password" id="login-password" maxlength="50" required />
-        <button type="submit" class="btn btn-primary">Войти</button>
-      </form>
+        <form id="login-form" class="auth-form" autocomplete="on">
+          <label for="login-username">Логин</label>
+          <input type="text" id="login-username" maxlength="30" required placeholder="Введите логин" />
+          <label for="login-password">Пароль</label>
+          <input type="password" id="login-password" maxlength="50" required placeholder="Введите пароль" />
+          <button type="submit" class="btn btn-primary">Войти</button>
+          <button type="button" class="btn btn-secondary auth-switch-btn" id="btn-show-register">Регистрация</button>
+        </form>
+      </section>
 
-      <form id="register-form" class="auth-form" autocomplete="on">
+      <section class="auth-panel" id="auth-panel-register" style="display:none;">
         <h3>Регистрация</h3>
-        <label for="register-username">Логин</label>
-        <input type="text" id="register-username" maxlength="30" required />
-        <label for="register-password">Пароль</label>
-        <input type="password" id="register-password" maxlength="50" required />
-        <label for="register-role">Роль</label>
-        <select id="register-role" required>
-          <option value="player">Игрок</option>
-          <option value="host">Ведущий</option>
-          <option value="admin">Администратор</option>
-        </select>
-        <button type="submit" class="btn btn-secondary">Зарегистрироваться</button>
-      </form>
+        <form id="register-form" class="auth-form" autocomplete="on">
+          <label for="register-username">Логин</label>
+          <input type="text" id="register-username" maxlength="30" required placeholder="Придумайте логин" />
+          <label for="register-password">Пароль</label>
+          <input type="password" id="register-password" maxlength="50" required placeholder="Придумайте пароль" />
+          <label for="register-role">Роль</label>
+          <select id="register-role" required>
+            <option value="player">Игрок</option>
+            <option value="host">Ведущий</option>
+            <option value="admin">Администратор</option>
+          </select>
+          <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+          <button type="button" class="btn btn-secondary auth-switch-btn" id="btn-show-login">Вернуться ко входу</button>
+        </form>
+      </section>
     </div>
   </div>
 </div>
 
-<header class="game-header">
-  <div class="auth-userbar">
-    <span id="auth-status">Не авторизован</span>
-    <a class="btn btn-secondary" href="index.html">К игре</a>
-    <button class="btn btn-secondary" id="btn-logout" style="display:none;">Выйти</button>
-  </div>
-  <div class="game-logo">👤</div>
-  <h1 class="game-title">Профиль пользователя</h1>
-  <p class="game-subtitle">Управление вашей учетной записью</p>
-</header>
+<!-- ===== СКРЫТЫЕ ЭЛЕМЕНТЫ ДЛЯ AUTH.JS ===== -->
+<div class="hidden-elements">
+  <span id="auth-status"></span>
+  <button id="btn-login"></button>
+  <button id="btn-logout"></button>
+</div>
 
-<main class="container">
-  <div class="profile-grid" id="profile-content" style="display:none;">
-    <section class="card profile-card">
-      <div class="section-title">Данные профиля</div>
-      <div class="profile-row"><span>Логин:</span><strong id="profile-username">-</strong></div>
-      <div class="profile-row"><span>Роль:</span><strong id="profile-role">-</strong></div>
-      <div class="profile-row"><span>Дата регистрации:</span><strong id="profile-created">-</strong></div>
-    </section>
+<!-- ===== ОСНОВНОЙ КОНТЕНТ (стили из lk.html) ===== -->
+<div class="lk-page">
 
-    <section class="card profile-card">
-      <div class="section-title">Права роли</div>
-      <ul id="profile-permissions" class="profile-list"></ul>
-    </section>
+  <!-- Логотип маленький слева сверху -->
+  <div class="logo-top-left">
+    <a href="main.html"><img src="images/logo-mini.svg" alt="БУНКЕР" class="small-logo"></a>
   </div>
 
-  <section class="card" id="admin-panel" style="display:none;">
-    <div class="section-title">Панель администратора</div>
-    <p class="admin-subtitle">Управление пользователями и ролями</p>
-    <div class="admin-table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>Логин</th>
-            <th>Роль</th>
-            <th>Дата регистрации</th>
-            <th>Действия</th>
-          </tr>
-        </thead>
-        <tbody id="admin-users-body"></tbody>
-      </table>
+  <!-- Кнопки справа сверху -->
+  <div class="top-actions">
+    <button class="top-btn" id="toGameBtn">К игре</button>
+    <button class="top-btn" id="logoutBtn">Выйти</button>
+  </div>
+
+  <!-- Личный кабинет -->
+  <div class="lk-container">
+    
+    <!-- Личные данные + Статистика -->
+    <div class="lk-row">
+      <!-- Личные данные -->
+      <div class="lk-section">
+        <h3 class="section-title">Личные данные</h3>
+        <div class="section-content">
+          <div class="info-row">
+            <span class="info-label">Имя пользователя</span>
+            <span class="info-value" id="profile-username">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Роль</span>
+            <span class="info-value" id="profile-role">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Дата регистрации</span>
+            <span class="info-value" id="profile-created">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Статистика -->
+      <div class="lk-section">
+        <h3 class="section-title">Статистика</h3>
+        <div class="section-content">
+          <div class="info-row">
+            <span class="info-label">Количество побед</span>
+            <span class="info-value" id="wins">0</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Количество проигрышей</span>
+            <span class="info-value" id="losses">0</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Количество игр</span>
+            <span class="info-value" id="totalGames">0</span>
+          </div>
+        </div>
+      </div>
     </div>
-  </section>
 
-  <div class="card" id="profile-guest" style="display:none; text-align:center;">
-    <div class="section-title" style="justify-content:center;">Гость</div>
-    <p style="color:var(--text-secondary); margin-bottom:1rem;">Войдите в аккаунт, чтобы посмотреть профиль.</p>
-    <button class="btn btn-primary" id="btn-open-auth">Войти или зарегистрироваться</button>
+    <!-- Друзья -->
+    <div class="lk-section-full">
+      <h3 class="section-title">Список друзей</h3>
+      <div class="section-content friends-list">
+        <div class="friend-row">
+          <span class="friend-name">Игрок 1</span>
+          <span class="friend-games">Игр: 20</span>
+        </div>
+        <div class="friend-row">
+          <span class="friend-name">Игрок 2</span>
+          <span class="friend-games">Игр: 6</span>
+        </div>
+        <div class="friend-row">
+          <span class="friend-name">Игрок 3</span>
+          <span class="friend-games">Игр: 16</span>
+        </div>
+      </div>
+    </div>
+
   </div>
-</main>
+</div>
 
+<!-- ===== ПОДКЛЮЧЕНИЕ AUTH.JS И СКРИПТОВ ===== -->
 <script src="js/auth.js"></script>
-<script src="js/profile.js"></script>
+<script>
+  (function() {
+    'use strict';
+
+    function $(id) { return document.getElementById(id); }
+
+    function showNotification(msg, type) {
+      type = type || 'info';
+      const notif = $('notification');
+      if (!notif) return;
+      notif.textContent = msg;
+      notif.className = 'notification ' + type + ' show';
+      clearTimeout(notif._timeout);
+      notif._timeout = setTimeout(function() {
+        notif.classList.remove('show');
+      }, 3000);
+    }
+
+    // Функция обновления данных профиля
+    function updateProfileUI() {
+      const user = window.BunkerAuth && typeof window.BunkerAuth.getCurrentUser === 'function'
+        ? window.BunkerAuth.getCurrentUser()
+        : null;
+
+      const usernameEl = $('profile-username');
+      const roleEl = $('profile-role');
+      const createdEl = $('profile-created');
+
+      if (user && user.username) {
+        usernameEl.textContent = user.username;
+        roleEl.textContent = window.BunkerAuth.roleLabels && window.BunkerAuth.roleLabels[user.role]
+          ? window.BunkerAuth.roleLabels[user.role]
+          : user.role || 'Игрок';
+        createdEl.textContent = user.createdAt
+          ? new Date(user.createdAt).toLocaleDateString('ru-RU')
+          : '—';
+        // Показать страницу, скрыть гостевую заглушку (если есть)
+      } else {
+        usernameEl.textContent = '—';
+        roleEl.textContent = '—';
+        createdEl.textContent = '—';
+        // Можно показать сообщение "войдите"
+        showNotification('Для просмотра профиля войдите в аккаунт', 'warning');
+        // Открыть оверлей авторизации, если не авторизованы
+        if (window.BunkerAuth && typeof window.BunkerAuth.openAuthOverlay === 'function') {
+          window.BunkerAuth.openAuthOverlay();
+        }
+      }
+    }
+
+    // ---- Обработчики кнопок ----
+    $('toGameBtn').addEventListener('click', function() {
+      window.location.href = 'main.html';
+    });
+
+    $('logoutBtn').addEventListener('click', function() {
+      if (window.BunkerAuth && typeof window.BunkerAuth.logout === 'function') {
+        window.BunkerAuth.logout();
+        // После выхода обновляем профиль и перенаправляем на главную (или остаёмся)
+        // Можно просто перезагрузить страницу, чтобы показать гостевой режим
+        window.location.reload();
+      } else {
+        showNotification('Ошибка выхода', 'error');
+      }
+    });
+
+    // ---- Инициализация ----
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.BunkerAuth && typeof window.BunkerAuth.init === 'function') {
+        window.BunkerAuth.init(function() {
+          // Колбэк после успешной авторизации
+          updateProfileUI();
+          // Закрываем оверлей, если он открыт
+          const overlay = $('auth-overlay');
+          if (overlay) overlay.classList.remove('open');
+        }, { openOnUnauth: true }); // Открыть оверлей, если не авторизован
+      } else {
+        showNotification('Ошибка загрузки модуля авторизации', 'error');
+      }
+
+      // Если пользователь уже авторизован (например, пришёл с главной), обновим данные
+      setTimeout(function() {
+        if (window.BunkerAuth && window.BunkerAuth.isAuthenticated && window.BunkerAuth.isAuthenticated()) {
+          updateProfileUI();
+        }
+      }, 200);
+    });
+
+  })();
+</script>
+
 </body>
 </html>
